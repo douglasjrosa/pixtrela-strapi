@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "exchanges",
+  "info": {
+    "singularName": "exchange",
+    "pluralName": "exchanges",
+    "displayName": "Exchange",
+    "description": "A redemption of currency for an award"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "timestamp": {
+      "type": "datetime"
+    },
+    "award": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::award.award"
+    },
+    "qty": {
+      "type": "integer",
+      "default": 1
+    },
+    "value": {
+      "type": "component",
+      "component": "currency-values.values",
+      "repeatable": false
+    }
+  }
+}

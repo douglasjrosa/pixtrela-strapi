@@ -1,0 +1,34 @@
+{
+  "kind": "collectionType",
+  "collectionName": "currencies",
+  "info": {
+    "singularName": "currency",
+    "pluralName": "currencies",
+    "displayName": "Currency",
+    "description": "In-app currency (e.g. Estrela) and its earn rate"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "icon": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "pluralTitle": {
+      "type": "string"
+    },
+    "currencyPerSecond": {
+      "type": "decimal",
+      "required": true,
+      "default": 0
+    }
+  }
+}

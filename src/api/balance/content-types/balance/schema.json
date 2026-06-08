@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "balances",
+  "info": {
+    "singularName": "balance",
+    "pluralName": "balances",
+    "displayName": "Balance",
+    "description": "Monthly currency balance per user (dated to day 1)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "currency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::currency.currency"
+    },
+    "previousBalance": {
+      "type": "decimal",
+      "default": 0
+    },
+    "totalIncome": {
+      "type": "decimal",
+      "default": 0
+    },
+    "totalOutcome": {
+      "type": "decimal",
+      "default": 0
+    },
+    "balance": {
+      "type": "decimal",
+      "default": 0
+    }
+  }
+}

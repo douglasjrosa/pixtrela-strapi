@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "teams",
+  "info": {
+    "singularName": "team",
+    "pluralName": "teams",
+    "displayName": "Team",
+    "description": "Production team with a leader and colaborators"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "leader": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "colaborators": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "exchangesFirstDay": {
+      "type": "integer",
+      "default": 3
+    },
+    "exchangesLastDay": {
+      "type": "integer",
+      "default": 15
+    },
+    "since": {
+      "type": "date"
+    },
+    "untill": {
+      "type": "date"
+    }
+  }
+}

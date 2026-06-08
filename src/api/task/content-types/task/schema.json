@@ -1,0 +1,73 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tasks",
+  "info": {
+    "singularName": "task",
+    "pluralName": "tasks",
+    "displayName": "Task",
+    "description": "Production task moving across kanban steps"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    },
+    "qty": {
+      "type": "integer",
+      "default": 1
+    },
+    "deliveryDate": {
+      "type": "date"
+    },
+    "startedAt": {
+      "type": "datetime"
+    },
+    "endedAt": {
+      "type": "datetime"
+    },
+    "step": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
+    "index": {
+      "type": "integer",
+      "default": 0
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "queued",
+        "producing",
+        "paused",
+        "finished"
+      ],
+      "default": "queued",
+      "required": true
+    },
+    "totalExpectedTime": {
+      "type": "integer",
+      "default": 0
+    },
+    "totalTimeSpent": {
+      "type": "integer",
+      "default": 0
+    },
+    "templateTaskCode": {
+      "type": "string"
+    },
+    "subTasks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::sub-task.sub-task",
+      "mappedBy": "task"
+    }
+  }
+}

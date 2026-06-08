@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "activities",
+  "info": {
+    "singularName": "activity",
+    "pluralName": "activities",
+    "displayName": "Activity",
+    "description": "Start/stop event of a colaborator on a subtask"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "subTask": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::sub-task.sub-task",
+      "inversedBy": "activities"
+    },
+    "colaborator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "action": {
+      "type": "enumeration",
+      "enum": [
+        "started",
+        "stoped"
+      ],
+      "required": true
+    },
+    "timestamp": {
+      "type": "datetime"
+    },
+    "qty": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

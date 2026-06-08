@@ -1,0 +1,23 @@
+{
+  "kind": "collectionType",
+  "collectionName": "steps",
+  "info": {
+    "singularName": "step",
+    "pluralName": "steps",
+    "displayName": "Step",
+    "description": "Kanban column / production stage"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "index": {
+      "type": "integer",
+      "default": 0
+    }
+  }
+}

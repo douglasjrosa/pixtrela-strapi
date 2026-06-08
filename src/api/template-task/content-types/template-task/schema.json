@@ -1,0 +1,29 @@
+{
+  "kind": "collectionType",
+  "collectionName": "template_tasks",
+  "info": {
+    "singularName": "template-task",
+    "pluralName": "template-tasks",
+    "displayName": "TemplateTask",
+    "description": "Reusable task blueprint with predefined subtasks"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "code": {
+      "type": "string",
+      "unique": true
+    },
+    "subTask": {
+      "type": "component",
+      "component": "template.subtask",
+      "repeatable": true
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "kind": "collectionType",
+  "collectionName": "sub_tasks",
+  "info": {
+    "singularName": "sub-task",
+    "pluralName": "sub-tasks",
+    "displayName": "SubTask",
+    "description": "Unit of work assigned to colaborators; source of Stars"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "task": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::task.task",
+      "inversedBy": "subTasks"
+    },
+    "qty": {
+      "type": "integer",
+      "default": 1
+    },
+    "sharingType": {
+      "type": "enumeration",
+      "default": "duration",
+      "enum": [
+        "qty",
+        "duration"
+      ]
+    },
+    "maxSameTimeWorkers": {
+      "type": "integer",
+      "default": 1
+    },
+    "assignedTo": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "index": {
+      "type": "integer",
+      "default": 0
+    },
+    "dependencies": {
+      "type": "json"
+    },
+    "status": {
+      "type": "enumeration",
+      "required": true,
+      "default": "queued",
+      "enum": [
+        "queued",
+        "producing",
+        "paused",
+        "finished"
+      ]
+    },
+    "expectedTime": {
+      "type": "integer",
+      "default": 0
+    },
+    "timeSpent": {
+      "type": "integer",
+      "default": 0
+    },
+    "activities": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::activity.activity",
+      "mappedBy": "subTask"
+    },
+    "activationStatus": {
+      "type": "enumeration",
+      "default": "locked",
+      "enum": [
+        "locked",
+        "unlocked",
+        "disabled"
+      ]
+    },
+    "reasonForDisabling": {
+      "type": "text"
+    }
+  }
+}

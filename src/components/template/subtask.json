@@ -1,0 +1,36 @@
+{
+  "collectionName": "components_template_subtasks",
+  "info": {
+    "displayName": "subtask"
+  },
+  "options": {},
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "qty": {
+      "type": "integer"
+    },
+    "sharingType": {
+      "type": "enumeration",
+      "enum": [
+        "qty",
+        "duration"
+      ]
+    },
+    "maxSameTimeWorkers": {
+      "type": "integer",
+      "default": 1
+    },
+    "index": {
+      "type": "integer"
+    },
+    "dependencies": {
+      "type": "json"
+    },
+    "expectedTime": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}

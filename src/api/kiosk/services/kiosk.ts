@@ -1,0 +1,289 @@
+import { calculateActivityDurationSeconds } from '../../../business/activity-duration';
+import {
+  assertKioskJwt,
+  resolveColaboratorUserId,
+} from '../../../business/kiosk-jwt';
+import {
+  parseDurationStopBody,
+  parseQtyStopBody,
+  resolveDurationStop,
+  resolveQtyStop,
+  type KioskStopBody,
+} from '../../../business/kiosk-stop';
+import {
+  buildStartedAtBySubTaskId,
+  filterKioskVisibleSubTasks,
+  mapSubTaskDbRow,
+  SUB_TASK_ASSIGNED_LINK_TABLE,
+  SUB_TASKS_TABLE,
+  USERS_TABLE,
+  type KioskSubTaskRow,
+} from '../../../business/kiosk-subtasks';
+
+const ACTIVITY_UID = 'api::activity.activity';
+const SUB_TASK_UID = 'api::sub-task.sub-task';
+
+type AssignedSubTaskDbRow = {
+  id?: number;
+  document_id?: string;
+  documentId?: string;
+  name?: string;
+  index?: number;
+  status?: string;
+  qty?: number;
+  sharing_type?: string;
+  sharingType?: string;
+  time_spent?: number;
+  activation_status?: string;
+  activationStatus?: string;
+};
+
+const PRODUCING_STATUS = 'producing';
+const UNLOCKED_ACTIVATION_STATUS = 'unlocked';
+
+async function assertSubTaskAssigned(
+  colaboratorUserId: number,
+  subTaskDocumentId: string,
+): Promise<void> {
+  const knex = strapi.db.connection;
+  const assigned = await knex(`${SUB_TASK_ASSIGNED_LINK_TABLE} as assignment`)
+    .join(`${SUB_TASKS_TABLE} as sub_tasks`, 'sub_tasks.id', 'assignment.sub_task_id')
+    .where({
+      'assignment.user_id': colaboratorUserId,
+      'sub_tasks.document_id': subTaskDocumentId,
+    })
+    .first();
+
+  if (!assigned) throw new Error('forbidden');
+}
+
+export default {
+  async listAssignedSubTasks(
+    colaboratorDocumentId: string,
+  ): Promise<KioskSubTaskRow[]> {
+    const knex = strapi.db.connection;
+    const [colaborator] = await knex(USERS_TABLE)
+      .where({ document_id: colaboratorDocumentId })
+      .select('id');
+
+    if (!colaborator?.id) return [];
+
+    const rows = (await knex(`${SUB_TASKS_TABLE} as sub_tasks`)
+      .join(
+        `${SUB_TASK_ASSIGNED_LINK_TABLE} as assignment`,
+        'assignment.sub_task_id',
+        'sub_tasks.id',
+      )
+      .where('assignment.user_id', colaborator.id)
+      .orderBy('sub_tasks.index', 'asc')
+      .select(
+        'sub_tasks.id',
+        'sub_tasks.document_id',
+        'sub_tasks.name',
+        'sub_tasks.index',
+        'sub_tasks.status',
+        'sub_tasks.qty',
+        'sub_tasks.sharing_type',
+        'sub_tasks.time_spent',
+        'sub_tasks.activation_status',
+      )) as AssignedSubTaskDbRow[];
+
+    const subTaskIds = rows
+      .map((row) => row.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    const producingIds = rows
+      .filter((row) => row.status === PRODUCING_STATUS && row.id)
+      .map((row) => Number(row.id));
+
+    const [startedAtBySubTaskId, completedQtyBySubTaskId] = await Promise.all([
+      fetchOpenStartedAtBySubTaskId(colaborator.id, producingIds),
+      fetchCompletedQtyBySubTaskId(subTaskIds),
+    ]);
+
+    return filterKioskVisibleSubTasks(
+      rows
+        .map((row) =>
+          mapSubTaskDbRow(
+            row,
+            row.id ? startedAtBySubTaskId.get(Number(row.id)) ?? null : null,
+            row.id ? completedQtyBySubTaskId.get(Number(row.id)) ?? 0 : 0,
+          ),
+        )
+        .filter((row) => row.documentId.length > 0),
+    );
+  },
+
+  async startSubTask(
+    colaboratorDocumentId: string,
+    subTaskDocumentId: string,
+    kioskJwtUserId: number,
+  ): Promise<void> {
+    const knex = strapi.db.connection;
+    await assertKioskJwt(knex, kioskJwtUserId);
+    const colaboratorUserId = await resolveColaboratorUserId(
+      knex,
+      colaboratorDocumentId,
+    );
+    await assertSubTaskAssigned(colaboratorUserId, subTaskDocumentId);
+
+    const subTask = await strapi.db.query(SUB_TASK_UID).findOne({
+      where: { documentId: subTaskDocumentId },
+    });
+    if (!subTask) throw new Error('notFound');
+    if (subTask.activationStatus !== UNLOCKED_ACTIVATION_STATUS) {
+      throw new Error('forbidden');
+    }
+    if (subTask.status !== 'queued') throw new Error('forbidden');
+
+    await strapi.db.query(ACTIVITY_UID).create({
+      data: {
+        subTask: subTask.id,
+        colaborator: colaboratorUserId,
+        action: 'started',
+        timestamp: new Date(),
+      },
+    });
+
+    await strapi.documents(SUB_TASK_UID).update({
+      documentId: subTaskDocumentId,
+      data: { status: 'producing' },
+    });
+  },
+
+  async stopSubTask(
+    colaboratorDocumentId: string,
+    subTaskDocumentId: string,
+    kioskJwtUserId: number,
+    body: KioskStopBody = {},
+  ): Promise<void> {
+    const knex = strapi.db.connection;
+    await assertKioskJwt(knex, kioskJwtUserId);
+    const colaboratorUserId = await resolveColaboratorUserId(
+      knex,
+      colaboratorDocumentId,
+    );
+    await assertSubTaskAssigned(colaboratorUserId, subTaskDocumentId);
+
+    const subTask = await strapi.db.query(SUB_TASK_UID).findOne({
+      where: { documentId: subTaskDocumentId },
+    });
+    if (!subTask) throw new Error('notFound');
+
+    const endedAt = new Date();
+    const openActivity = await strapi.db.query(ACTIVITY_UID).findOne({
+      where: {
+        subTask: subTask.id,
+        colaborator: colaboratorUserId,
+        action: 'started',
+      },
+      orderBy: { timestamp: 'desc' },
+    });
+
+    const sessionSeconds =
+      openActivity?.timestamp instanceof Date
+        ? calculateActivityDurationSeconds(openActivity.timestamp, endedAt)
+        : openActivity?.timestamp
+          ? calculateActivityDurationSeconds(
+              new Date(openActivity.timestamp),
+              endedAt,
+            )
+          : 0;
+
+    const sharingType =
+      subTask.sharingType === 'qty' ? 'qty' : ('duration' as const);
+
+    const stopResult =
+      sharingType === 'qty'
+        ? resolveQtyStop(
+            Number(subTask.qty ?? 1),
+            await sumStoppedQty(subTask.id),
+            parseQtyStopBody(body),
+          )
+        : resolveDurationStop(parseDurationStopBody(body));
+
+    await strapi.documents(SUB_TASK_UID).update({
+      documentId: subTaskDocumentId,
+      data: {
+        status: stopResult.subTaskStatus,
+        timeSpent: Number(subTask.timeSpent ?? 0) + sessionSeconds,
+      },
+    });
+
+    await strapi.db.query(ACTIVITY_UID).create({
+      data: {
+        subTask: subTask.id,
+        colaborator: colaboratorUserId,
+        action: 'stoped',
+        timestamp: endedAt,
+        qty: stopResult.qty,
+      },
+    });
+  },
+};
+
+async function sumStoppedQty(subTaskId: number): Promise<number> {
+  const activities = await strapi.db.query(ACTIVITY_UID).findMany({
+    where: {
+      subTask: subTaskId,
+      action: 'stoped',
+    },
+  });
+
+  return activities.reduce(
+    (total, activity) => total + Number(activity.qty ?? 0),
+    0,
+  );
+}
+
+async function fetchCompletedQtyBySubTaskId(
+  subTaskIds: number[],
+): Promise<Map<number, number>> {
+  if (subTaskIds.length === 0) return new Map();
+
+  const activities = await strapi.db.query(ACTIVITY_UID).findMany({
+    where: {
+      action: 'stoped',
+      subTask: { id: { $in: subTaskIds } },
+    },
+    populate: { subTask: { select: ['id'] } },
+  });
+
+  const map = new Map<number, number>();
+  for (const activity of activities) {
+    const subTask = activity.subTask as { id?: number } | null;
+    if (!subTask?.id) continue;
+    map.set(subTask.id, (map.get(subTask.id) ?? 0) + Number(activity.qty ?? 0));
+  }
+  return map;
+}
+
+async function fetchOpenStartedAtBySubTaskId(
+  colaboratorUserId: number,
+  subTaskIds: number[],
+): Promise<Map<number, string>> {
+  if (subTaskIds.length === 0) return new Map();
+
+  const activities = await strapi.db.query(ACTIVITY_UID).findMany({
+    where: {
+      colaborator: colaboratorUserId,
+      action: 'started',
+      subTask: { id: { $in: subTaskIds } },
+    },
+    orderBy: { timestamp: 'asc' },
+    populate: { subTask: { select: ['id'] } },
+  });
+
+  const refs = activities
+    .map((activity) => {
+      const subTask = activity.subTask as { id?: number } | null;
+      const timestamp = activity.timestamp;
+      if (!subTask?.id || !timestamp) return null;
+      const iso =
+        timestamp instanceof Date ? timestamp.toISOString() : String(timestamp);
+      return { subTaskId: subTask.id, timestamp: iso };
+    })
+    .filter((ref): ref is { subTaskId: number; timestamp: string } => ref !== null);
+
+  return buildStartedAtBySubTaskId(refs);
+}

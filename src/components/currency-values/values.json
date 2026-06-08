@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_currency_values_values",
+  "info": {
+    "displayName": "values",
+    "icon": "priceTag"
+  },
+  "options": {},
+  "attributes": {
+    "currency": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::currency.currency"
+    },
+    "numberOf": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}
