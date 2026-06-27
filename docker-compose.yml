@@ -1,0 +1,25 @@
+# Local dev/test database for Pixtrela Strapi.
+# Usage: docker compose up -d
+services:
+  db:
+    image: mysql:8.4
+    container_name: pixtrela-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: pixtrela
+      MYSQL_USER: pixtrela
+      MYSQL_PASSWORD: pixtrela
+    ports:
+      # Bound to loopback only; reach it from the host via SSH tunnel.
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - pixtrela_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ppixtrela"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pixtrela_mysql:
