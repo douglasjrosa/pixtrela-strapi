@@ -9,6 +9,26 @@ const TASK_SERVICE_UID = 'api::task.task';
 const TEMPLATE_TASK_UID = 'api::template-task.template-task';
 const SUB_TASK_UID = 'api::sub-task.sub-task';
 
+/** Fields written by the sync services themselves (plus Strapi internals). */
+const COMPUTED_FIELDS = new Set([
+  'totalExpectedTime',
+  'totalTimeSpent',
+  'updatedAt',
+  'publishedAt',
+]);
+
+/**
+ * True when an update touched only computed/internal fields. Such updates are
+ * triggered by syncTotalExpectedTime/syncTotalTimeSpent, so re-running the sync
+ * would recurse into afterUpdate forever.
+ */
+function isComputedOnlyUpdate(data: Record<string, unknown> | undefined): boolean {
+  if (!data) return false;
+  const keys = Object.keys(data);
+  if (keys.length === 0) return false;
+  return keys.every((key) => COMPUTED_FIELDS.has(key));
+}
+
 /**
  * When a task is created with templateTaskCode, copy template subTask components
  * into SubTask records linked to the new task.
@@ -47,7 +67,11 @@ export default {
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);
   },
 
-  async afterUpdate(event: { result: { documentId?: string } }) {
+  async afterUpdate(event: {
+    result: { documentId?: string };
+    params?: { data?: Record<string, unknown> };
+  }) {
+    if (isComputedOnlyUpdate(event.params?.data)) return;
     const taskDocumentId = event.result?.documentId;
     if (!taskDocumentId) return;
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);

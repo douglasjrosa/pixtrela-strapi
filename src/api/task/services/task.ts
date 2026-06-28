@@ -107,8 +107,10 @@ export default factories.createCoreService(TASK_UID, ({ strapi }) => {
         Number(task.qty ?? 1),
       );
 
-      await strapi.documents(TASK_UID).update({
-        documentId: taskDocumentId,
+      // afterUpdate guards against computed-only updates, preventing the
+      // sync -> update -> afterUpdate -> sync recursion.
+      await strapi.db.query(TASK_UID).update({
+        where: { documentId: taskDocumentId },
         data: { totalExpectedTime },
       });
     },
@@ -118,8 +120,9 @@ export default factories.createCoreService(TASK_UID, ({ strapi }) => {
     async syncTotalTimeSpent(taskDocumentId: string): Promise<void> {
       const totalTimeSpent = await computeTotalTimeSpent(taskDocumentId);
 
-      await strapi.documents(TASK_UID).update({
-        documentId: taskDocumentId,
+      // afterUpdate guards against computed-only updates (see syncTotalExpectedTime).
+      await strapi.db.query(TASK_UID).update({
+        where: { documentId: taskDocumentId },
         data: { totalTimeSpent },
       });
     },
