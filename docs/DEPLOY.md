@@ -38,9 +38,22 @@ CORS_ORIGINS=https://pixtrela.com.br,https://pixtrela.com,https://your-app.verce
 
 ## Manual deploy on server
 
+Build runs in GitHub Actions (2 GB VPS cannot compile Strapi in Docker).
+On the server, only the runtime image is built from precompiled `dist/`:
+
 ```bash
 cd /var/www/pixtrela/strapi
 docker compose -f docker-compose.prod.yml up -d --build
+```
+
+For a local emergency deploy from your machine:
+
+```bash
+npm ci && npm run build
+tar --exclude=node_modules --exclude=.git --exclude=public/uploads \
+  --exclude=db/mysql-data --exclude=.env --exclude=db/.env -czf deploy.tgz .
+scp deploy.tgz root@179.0.179.210:/var/www/pixtrela/strapi/
+ssh root@179.0.179.210 'cd /var/www/pixtrela/strapi && tar xzf deploy.tgz && rm deploy.tgz && docker compose -f docker-compose.prod.yml up -d --build'
 ```
 
 ## Database backup

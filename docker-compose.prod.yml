@@ -3,7 +3,7 @@ services:
     container_name: pixtrela-strapi
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.runtime
     image: pixtrela-strapi:latest
     restart: always
     env_file: .env

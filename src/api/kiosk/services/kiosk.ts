@@ -419,7 +419,7 @@ export default {
       mimeType,
       fileBuffer.length,
     );
-    if (!validation.ok) {
+    if (validation.ok === false) {
       throw new Error(validation.error);
     }
 
