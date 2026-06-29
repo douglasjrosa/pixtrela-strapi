@@ -1,0 +1,15 @@
+node_modules
+.cache
+build
+dist
+.strapi
+.git
+.env
+.env.*
+!.env.example
+!.env.production.example
+db/mysql-data
+db/backups
+*.log
+coverage
+*.test.ts

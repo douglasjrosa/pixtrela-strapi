@@ -1,0 +1,25 @@
+services:
+  strapi:
+    container_name: pixtrela-strapi
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    image: pixtrela-strapi:latest
+    restart: always
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./public/uploads:/opt/app/public/uploads
+    ports:
+      - "127.0.0.1:1337:1337"
+    networks:
+      - pixtrela_db
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+networks:
+  pixtrela_db:
+    external: true
