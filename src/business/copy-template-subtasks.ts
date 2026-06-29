@@ -32,18 +32,50 @@ export type SubTaskCreateFromTemplate = {
   sharingType: 'qty' | 'duration';
   maxSameTimeWorkers: number;
   index: number;
-  dependencies: string[];
+  dependencyRefs: Array<string | number>;
   status: typeof DEFAULT_STATUS;
   activationStatus: typeof DEFAULT_ACTIVATION_STATUS;
   expectedTime: number;
   timeSpent: number;
 };
 
-function toDependencyIds(value: JsonValue | undefined): string[] {
+export function parseTemplateDependencyRefs(
+  value: JsonValue | undefined,
+): Array<string | number> {
   if (!Array.isArray(value)) return [];
   return value.filter(
-    (id): id is string => typeof id === 'string' && id.trim().length > 0,
+    (ref): ref is string | number =>
+      typeof ref === 'string' || typeof ref === 'number',
   );
+}
+
+export function resolveTemplateDependencyIds(
+  refs: Array<string | number>,
+  documentIdsByIndex: ReadonlyMap<number, string>,
+): string[] {
+  const resolved: string[] = [];
+
+  for (const ref of refs) {
+    if (typeof ref === 'number') {
+      const documentId = documentIdsByIndex.get(ref);
+      if (documentId) resolved.push(documentId);
+      continue;
+    }
+
+    const trimmed = ref.trim();
+    if (!trimmed) continue;
+
+    const asIndex = Number(trimmed);
+    if (Number.isInteger(asIndex) && documentIdsByIndex.has(asIndex)) {
+      const documentId = documentIdsByIndex.get(asIndex);
+      if (documentId) resolved.push(documentId);
+      continue;
+    }
+
+    resolved.push(trimmed);
+  }
+
+  return resolved;
 }
 
 export function shouldCopyTemplateSubtasks(
@@ -70,7 +102,7 @@ export function mapTemplateSubTasksToCreatePayloads(
       sharingType: component.sharingType ?? DEFAULT_SHARING_TYPE,
       maxSameTimeWorkers: component.maxSameTimeWorkers ?? DEFAULT_MAX_WORKERS,
       index: component.index ?? DEFAULT_INDEX,
-      dependencies: toDependencyIds(component.dependencies),
+      dependencyRefs: parseTemplateDependencyRefs(component.dependencies),
       status: DEFAULT_STATUS,
       activationStatus: DEFAULT_ACTIVATION_STATUS,
       expectedTime: component.expectedTime ?? DEFAULT_EXPECTED_TIME,

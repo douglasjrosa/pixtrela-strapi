@@ -1,7 +1,10 @@
 import { compileStrapi, createStrapi } from '@strapi/strapi';
 
+import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from '../src/business/kiosk-session-idle';
+
 const CURRENCY_UID = 'api::currency.currency';
 const STEP_UID = 'api::step.step';
+const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
 
 const DEFAULT_CURRENCY = {
   name: 'star',
@@ -38,6 +41,13 @@ async function seed() {
     if (existing.length === 0) {
       await app.documents(STEP_UID).create({ data: step });
     }
+  }
+
+  const kioskSetting = await app.documents(KIOSK_SETTING_UID).findFirst();
+  if (!kioskSetting) {
+    await app.documents(KIOSK_SETTING_UID).create({
+      data: { sessionIdleSeconds: DEFAULT_KIOSK_SESSION_IDLE_SECONDS },
+    });
   }
 
   app.log.info('[pixtrela] seed complete');

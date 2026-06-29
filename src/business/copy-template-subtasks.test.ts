@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   mapTemplateSubTasksToCreatePayloads,
+  resolveTemplateDependencyIds,
   shouldCopyTemplateSubtasks,
 } from './copy-template-subtasks';
 
@@ -46,7 +47,7 @@ describe('mapTemplateSubTasksToCreatePayloads', () => {
         sharingType: 'duration',
         maxSameTimeWorkers: 3,
         index: 1,
-        dependencies: ['dep-doc'],
+        dependencyRefs: ['dep-doc'],
         status: 'queued',
         activationStatus: 'locked',
         expectedTime: 120,
@@ -68,7 +69,7 @@ describe('mapTemplateSubTasksToCreatePayloads', () => {
       sharingType: 'duration',
       maxSameTimeWorkers: 1,
       index: 0,
-      dependencies: [],
+      dependencyRefs: [],
       status: 'queued',
       activationStatus: 'locked',
       expectedTime: 0,
@@ -91,5 +92,26 @@ describe('mapTemplateSubTasksToCreatePayloads', () => {
     expect(mapTemplateSubTasksToCreatePayloads(undefined, 'task-doc-4')).toEqual(
       [],
     );
+  });
+});
+
+describe('resolveTemplateDependencyIds', () => {
+  it('maps template index refs to created sub-task document ids', () => {
+    const documentIdsByIndex = new Map<number, string>([
+      [0, 'sub-a'],
+      [2, 'sub-c'],
+    ]);
+
+    expect(
+      resolveTemplateDependencyIds([0, 2], documentIdsByIndex),
+    ).toEqual(['sub-a', 'sub-c']);
+  });
+
+  it('keeps string document ids for legacy templates', () => {
+    const documentIdsByIndex = new Map<number, string>();
+
+    expect(
+      resolveTemplateDependencyIds(['dep-doc'], documentIdsByIndex),
+    ).toEqual(['dep-doc']);
   });
 });

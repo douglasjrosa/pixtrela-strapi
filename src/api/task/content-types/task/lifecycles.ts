@@ -1,5 +1,7 @@
+import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   mapTemplateSubTasksToCreatePayloads,
+  resolveTemplateDependencyIds,
   shouldCopyTemplateSubtasks,
   type TemplateSubTaskComponent,
 } from '../../../../business/copy-template-subtasks';
@@ -60,11 +62,38 @@ export default {
       taskDocumentId,
     );
 
-    for (const data of payloads) {
-      await strapi.documents(SUB_TASK_UID).create({ data });
+    const documentIdsByIndex = new Map<number, string>();
+    const sortedPayloads = [...payloads].sort((a, b) => a.index - b.index);
+
+    for (const data of sortedPayloads) {
+      const dependencies = resolveTemplateDependencyIds(
+        data.dependencyRefs,
+        documentIdsByIndex,
+      );
+      const created = await strapi.documents(SUB_TASK_UID).create({
+        data: {
+          name: data.name,
+          task: data.task,
+          qty: data.qty,
+          sharingType: data.sharingType,
+          maxSameTimeWorkers: data.maxSameTimeWorkers,
+          index: data.index,
+          dependencies,
+          status: data.status,
+          activationStatus: data.activationStatus,
+          expectedTime: data.expectedTime,
+          timeSpent: data.timeSpent,
+        },
+      });
+
+      const subTaskDocumentId = created.documentId;
+      if (subTaskDocumentId) {
+        documentIdsByIndex.set(data.index, subTaskDocumentId);
+      }
     }
 
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);
+    await runTaskSubTaskSyncRoutine(taskDocumentId);
   },
 
   async afterUpdate(event: {
@@ -75,5 +104,6 @@ export default {
     const taskDocumentId = event.result?.documentId;
     if (!taskDocumentId) return;
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);
+    await runTaskSubTaskSyncRoutine(taskDocumentId);
   },
 };

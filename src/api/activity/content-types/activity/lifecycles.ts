@@ -1,21 +1,34 @@
 import { calculateStars, shouldCreditStars } from '../../../../business/stars';
 
+import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
+
 const ACTIVITY_UID = 'api::activity.activity';
 const CURRENCY_UID = 'api::currency.currency';
 const BALANCE_UID = 'api::balance.balance';
 const TASK_SERVICE_UID = 'api::task.task';
 
-async function syncParentTaskTimeSpent(activityDocumentId: string): Promise<void> {
+async function readTaskDocumentId(activityDocumentId: string): Promise<string | null> {
   const activity = await strapi.documents(ACTIVITY_UID).findOne({
     documentId: activityDocumentId,
     populate: { subTask: { populate: { task: { fields: ['documentId'] } } } },
   });
 
   const subTask = activity?.subTask as { task?: { documentId?: string } | null } | null;
-  const taskDocumentId = subTask?.task?.documentId;
+  return subTask?.task?.documentId ?? null;
+}
+
+async function syncParentTaskTimeSpent(activityDocumentId: string): Promise<void> {
+  const taskDocumentId = await readTaskDocumentId(activityDocumentId);
   if (!taskDocumentId) return;
 
   await strapi.service(TASK_SERVICE_UID).syncTotalTimeSpent(taskDocumentId);
+}
+
+async function syncParentTaskSubTasks(activityDocumentId: string): Promise<void> {
+  const taskDocumentId = await readTaskDocumentId(activityDocumentId);
+  if (!taskDocumentId) return;
+
+  await runTaskSubTaskSyncRoutine(taskDocumentId);
 }
 
 /**
@@ -59,5 +72,6 @@ export default {
     }
 
     await syncParentTaskTimeSpent(documentId);
+    await syncParentTaskSubTasks(documentId);
   },
 };

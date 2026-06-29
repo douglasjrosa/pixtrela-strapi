@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canIdentifyAtKiosk,
   canIdentifyColaborator,
   mapUserRowFromDb,
   parseKioskIdentifyBody,
@@ -60,6 +61,22 @@ describe('mapUserRowFromDb', () => {
       password: 'hashed',
       blocked: false,
     });
+  });
+});
+
+describe('canIdentifyAtKiosk', () => {
+  it('allows active colaborators and staff with password', () => {
+    expect(canIdentifyAtKiosk(COLABORATOR)).toBe(true);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, roleType: 'admin' })).toBe(true);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, roleType: 'manager' })).toBe(true);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, roleType: 'leader' })).toBe(true);
+  });
+
+  it('rejects missing, blocked or unsupported roles', () => {
+    expect(canIdentifyAtKiosk(null)).toBe(false);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, blocked: true })).toBe(false);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, roleType: 'kiosk' })).toBe(false);
+    expect(canIdentifyAtKiosk({ ...COLABORATOR, password: undefined })).toBe(false);
   });
 });
 

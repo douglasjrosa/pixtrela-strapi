@@ -1,0 +1,21 @@
+{
+  "kind": "singleType",
+  "collectionName": "kiosk_settings",
+  "info": {
+    "singularName": "kiosk-setting",
+    "pluralName": "kiosk-settings",
+    "displayName": "Kiosk Setting",
+    "description": "Totem session and related settings"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "sessionIdleSeconds": {
+      "type": "integer",
+      "required": true,
+      "default": 7,
+      "min": 1
+    }
+  }
+}

@@ -11,6 +11,42 @@ export default {
     },
     {
       method: 'GET',
+      path: '/kiosk/staff/users/:documentId',
+      handler: 'kiosk.getStaffUser',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/kiosk/staff/users/:documentId/colaborators',
+      handler: 'kiosk.listStaffColaborators',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'POST',
+      path: '/kiosk/staff/users/:documentId/colaborators/:colaboratorDocumentId/password',
+      handler: 'kiosk.setColaboratorPassword',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'POST',
+      path: '/kiosk/staff/users/:documentId/colaborators/:colaboratorDocumentId/avatar',
+      handler: 'kiosk.setColaboratorAvatar',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
       path: '/kiosk/colaborators/:documentId/sub-tasks',
       handler: 'kiosk.listSubTasks',
       config: {

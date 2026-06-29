@@ -1,6 +1,8 @@
 import { KIOSK_ROLE_TYPE } from './user-role';
 import { USERS_TABLE } from './kiosk-subtasks';
 
+const STAFF_ROLE_TYPES = new Set(['admin', 'manager', 'leader']);
+
 type JwtVerify = (token: string) => Promise<{ id?: number }>;
 
 export async function resolveJwtUserId(
@@ -31,10 +33,27 @@ function readRoleType(row: Record<string, unknown> | undefined): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-export async function assertKioskJwt(knex: KnexLike, jwtUserId: number): Promise<void> {
+export async function readUserRoleType(
+  knex: KnexLike,
+  jwtUserId: number,
+): Promise<string | null> {
   const rows = await knex(USERS_TABLE).where({ id: jwtUserId }).select('role_type');
-  const roleType = readRoleType(rows[0]);
+  return readRoleType(rows[0]);
+}
+
+export async function assertKioskJwt(knex: KnexLike, jwtUserId: number): Promise<void> {
+  const roleType = await readUserRoleType(knex, jwtUserId);
   if (roleType !== KIOSK_ROLE_TYPE) throw new Error('forbidden');
+}
+
+export async function assertKioskOrStaffJwt(
+  knex: KnexLike,
+  jwtUserId: number,
+): Promise<'kiosk' | 'staff'> {
+  const roleType = await readUserRoleType(knex, jwtUserId);
+  if (roleType === KIOSK_ROLE_TYPE) return 'kiosk';
+  if (roleType && STAFF_ROLE_TYPES.has(roleType)) return 'staff';
+  throw new Error('forbidden');
 }
 
 export async function resolveColaboratorUserId(

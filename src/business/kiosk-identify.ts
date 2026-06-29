@@ -1,5 +1,12 @@
 const MIN_PASSWORD_LENGTH = 6;
 
+export const KIOSK_IDENTIFIABLE_ROLE_TYPES = new Set([
+  'colaborator',
+  'admin',
+  'manager',
+  'leader',
+]);
+
 export type ColaboratorUserRecord = {
   id: number;
   username: string;
@@ -88,6 +95,24 @@ export function parseKioskIdentifyBody(body: unknown): ParseResult {
   return { ok: true, value: { code: parsedCode, password } };
 }
 
+export function readKioskIdentifiableRole(
+  user: ColaboratorUserRecord | null | undefined,
+): string | null {
+  const roleType = readColaboratorRoleType(user);
+  if (!roleType || !KIOSK_IDENTIFIABLE_ROLE_TYPES.has(roleType)) return null;
+  return roleType;
+}
+
+export function canIdentifyAtKiosk(
+  user: ColaboratorUserRecord | null | undefined,
+): user is ColaboratorUserRecord {
+  if (!user) return false;
+  if (user.blocked) return false;
+  if (!user.password) return false;
+  return readKioskIdentifiableRole(user) !== null;
+}
+
+/** @deprecated Use canIdentifyAtKiosk */
 export function canIdentifyColaborator(
   user: ColaboratorUserRecord | null | undefined,
 ): user is ColaboratorUserRecord {

@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  countActiveWorkersFromActivities,
+  isSubTaskAtWorkerCapacity,
+} from './subtask-active-workers';
+import type { ActivityTimeRow } from './task-time-spent';
+
+function activity(
+  colaboratorId: number,
+  action: ActivityTimeRow['action'],
+  timestamp: string,
+): ActivityTimeRow {
+  return {
+    colaboratorId,
+    action,
+    timestamp: new Date(timestamp),
+  };
+}
+
+describe('countActiveWorkersFromActivities', () => {
+  it('counts colaborators with an open started session', () => {
+    const count = countActiveWorkersFromActivities([
+      activity(1, 'started', '2026-06-05T10:00:00.000Z'),
+      activity(2, 'started', '2026-06-05T10:01:00.000Z'),
+      activity(3, 'started', '2026-06-05T10:02:00.000Z'),
+      activity(3, 'stoped', '2026-06-05T10:10:00.000Z'),
+    ]);
+
+    expect(count).toBe(2);
+  });
+
+  it('returns zero when every session was stopped', () => {
+    const count = countActiveWorkersFromActivities([
+      activity(1, 'started', '2026-06-05T10:00:00.000Z'),
+      activity(1, 'stoped', '2026-06-05T10:05:00.000Z'),
+    ]);
+
+    expect(count).toBe(0);
+  });
+});
+
+describe('isSubTaskAtWorkerCapacity', () => {
+  it('is true only for dual-worker subtasks with two active workers', () => {
+    expect(isSubTaskAtWorkerCapacity(2, 2)).toBe(true);
+    expect(isSubTaskAtWorkerCapacity(2, 1)).toBe(false);
+    expect(isSubTaskAtWorkerCapacity(1, 1)).toBe(false);
+  });
+});

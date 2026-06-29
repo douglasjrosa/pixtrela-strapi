@@ -1,4 +1,4 @@
-import { findLockedSubTasksToUnlock } from '../../../../business/sub-task-dependencies';
+import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   resolveTaskStatusFromSubTasks,
   type TaskStatus,
@@ -72,37 +72,11 @@ async function syncParentTaskCompletionForTask(
   });
 }
 
-async function syncParentTaskCompletion(
-  subTaskDocumentId: string,
-): Promise<void> {
-  const taskDocumentId = await readTaskDocumentId(subTaskDocumentId);
-  if (!taskDocumentId) return;
+async function syncSubTasksForTask(taskDocumentId: string): Promise<void> {
+  await runTaskSubTaskSyncRoutine(taskDocumentId);
   await syncParentTaskCompletionForTask(taskDocumentId);
 }
 
-async function unlockDependentsForTask(taskDocumentId: string): Promise<void> {
-  const siblings = await strapi.documents(SUB_TASK_UID).findMany({
-    filters: { task: { documentId: taskDocumentId } },
-    fields: ['documentId', 'status', 'activationStatus', 'dependencies'],
-  });
-
-  const rows = siblings.map((row) => ({
-    documentId: String(row.documentId ?? ''),
-    status: String(row.status ?? ''),
-    activationStatus: row.activationStatus as string | null | undefined,
-    dependencies: row.dependencies,
-  }));
-
-  const toUnlock = findLockedSubTasksToUnlock(rows);
-  await Promise.all(
-    toUnlock.map((documentId) =>
-      strapi.documents(SUB_TASK_UID).update({
-        documentId,
-        data: { activationStatus: 'unlocked' },
-      }),
-    ),
-  );
-}
 /**
  * When a sub-task becomes finished, mark the parent task finished if all
  * sibling sub-tasks are finished too. Keep task totalExpectedTime in sync.
@@ -112,6 +86,11 @@ export default {
     const documentId = event.result?.documentId;
     if (!documentId) return;
     await syncParentTaskExpectedTime(documentId);
+
+    const taskDocumentId = await readTaskDocumentId(documentId);
+    if (taskDocumentId) {
+      await syncSubTasksForTask(taskDocumentId);
+    }
   },
 
   async afterUpdate(event: { result: { documentId?: string } }) {
@@ -119,11 +98,10 @@ export default {
     if (!documentId) return;
 
     await syncParentTaskExpectedTime(documentId);
-    await syncParentTaskCompletion(documentId);
 
     const taskDocumentId = await readTaskDocumentId(documentId);
     if (taskDocumentId) {
-      await unlockDependentsForTask(taskDocumentId);
+      await syncSubTasksForTask(taskDocumentId);
     }
   },
   async beforeDelete(event: {
@@ -141,6 +119,6 @@ export default {
     const taskDocumentId = event.state.taskDocumentId;
     if (!taskDocumentId) return;
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);
-    await syncParentTaskCompletionForTask(taskDocumentId);
+    await syncSubTasksForTask(taskDocumentId);
   },
 };

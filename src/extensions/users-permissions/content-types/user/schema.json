@@ -79,6 +79,11 @@
       "type": "enumeration",
       "enum": ["admin", "manager", "leader", "colaborator", "kiosk"],
       "configurable": false
+    },
+    "avatar": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
     }
   }
 }

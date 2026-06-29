@@ -619,6 +619,43 @@ export interface ApiExchangeExchange extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiKioskSettingKioskSetting extends Struct.SingleTypeSchema {
+  collectionName: 'kiosk_settings';
+  info: {
+    description: 'Totem session and related settings';
+    displayName: 'Kiosk Setting';
+    pluralName: 'kiosk-settings';
+    singularName: 'kiosk-setting';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::kiosk-setting.kiosk-setting'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    sessionIdleSeconds: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<7>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiStepStep extends Struct.CollectionTypeSchema {
   collectionName: 'steps';
   info: {
@@ -1274,6 +1311,7 @@ export interface PluginUsersPermissionsUser
     timestamps: true;
   };
   attributes: {
+    avatar: Schema.Attribute.Media<'images'>;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     code: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1335,6 +1373,7 @@ declare module '@strapi/strapi' {
       'api::balance.balance': ApiBalanceBalance;
       'api::currency.currency': ApiCurrencyCurrency;
       'api::exchange.exchange': ApiExchangeExchange;
+      'api::kiosk-setting.kiosk-setting': ApiKioskSettingKioskSetting;
       'api::step.step': ApiStepStep;
       'api::sub-task.sub-task': ApiSubTaskSubTask;
       'api::task.task': ApiTaskTask;

@@ -1,5 +1,14 @@
 import { calculateActivityDurationSeconds } from '../../../business/activity-duration';
 import {
+  validateKioskAvatarFile,
+} from '../../../business/kiosk-avatar';
+import {
+  canStaffSetColaboratorPassword,
+  filterColaboratorsForStaffRole,
+  type KioskColaboratorRow,
+  type KioskStaffActorRole,
+} from '../../../business/kiosk-staff-colaborators';
+import {
   assertKioskJwt,
   resolveColaboratorUserId,
 } from '../../../business/kiosk-jwt';
@@ -22,6 +31,150 @@ import {
 
 const ACTIVITY_UID = 'api::activity.activity';
 const SUB_TASK_UID = 'api::sub-task.sub-task';
+const TEAM_UID = 'api::team.team';
+const USER_UID = 'plugin::users-permissions.user';
+
+type StaffActor = {
+  id: number;
+  documentId: string;
+  role: KioskStaffActorRole;
+};
+
+function readDocumentId(row: {
+  documentId?: string;
+  document_id?: string;
+}): string {
+  return String(row.documentId ?? row.document_id ?? '');
+}
+
+async function fetchActiveColaboratorRows(): Promise<KioskColaboratorRow[]> {
+  const knex = strapi.db.connection;
+  const rows = (await knex(USERS_TABLE)
+    .where({ role_type: 'colaborator' })
+    .orderBy('name', 'asc')
+    .select('document_id', 'name', 'username', 'code', 'blocked')) as Array<{
+    document_id?: string;
+    name?: string;
+    username?: string;
+    code?: number;
+    blocked?: boolean | number;
+  }>;
+
+  return rows
+    .filter((row) => row.blocked !== true && row.blocked !== 1)
+    .map((row) => ({
+      documentId: String(row.document_id ?? ''),
+      name: String(row.name ?? row.username ?? ''),
+      code: Number(row.code ?? 0),
+    }))
+    .filter((row) => row.documentId.length > 0);
+}
+
+async function assertStaffCanManageColaborator(
+  staffDocumentId: string,
+  colaboratorDocumentId: string,
+): Promise<{ targetId: number; actor: StaffActor }> {
+  const actor = await resolveStaffActor(staffDocumentId);
+  if (!actor) throw new Error('forbidden');
+
+  const knex = strapi.db.connection;
+  const targetRows = (await knex(USERS_TABLE)
+    .where({ document_id: colaboratorDocumentId, role_type: 'colaborator' })
+    .select('id', 'blocked')
+    .limit(1)) as Array<{ id?: number; blocked?: boolean | number }>;
+  const target = targetRows[0];
+  if (!target?.id) throw new Error('notFound');
+  if (target.blocked === true || target.blocked === 1) {
+    throw new Error('forbidden');
+  }
+
+  const teamIds =
+    actor.role === 'leader'
+      ? await fetchLeaderTeamColaboratorDocumentIds(actor.id)
+      : new Set<string>();
+
+  if (
+    !canStaffSetColaboratorPassword(
+      actor.role,
+      true,
+      teamIds,
+      colaboratorDocumentId,
+    )
+  ) {
+    throw new Error('forbidden');
+  }
+
+  return { targetId: Number(target.id), actor };
+}
+
+async function readColaboratorAvatarUrl(documentId: string): Promise<string | null> {
+  const user = await strapi.documents(USER_UID).findOne({
+    documentId,
+    populate: { avatar: { fields: ['url'] } },
+  });
+  const avatar = user?.avatar as { url?: string } | null | undefined;
+  return avatar?.url ? String(avatar.url) : null;
+}
+
+async function mapColaboratorsWithAvatars(
+  colaborators: KioskColaboratorRow[],
+): Promise<KioskColaboratorRow[]> {
+  return Promise.all(
+    colaborators.map(async (colaborator) => ({
+      ...colaborator,
+      avatarUrl: await readColaboratorAvatarUrl(colaborator.documentId),
+    })),
+  );
+}
+
+async function fetchLeaderTeamColaboratorDocumentIds(
+  leaderUserId: number,
+): Promise<Set<string>> {
+  const teams = await strapi.db.query(TEAM_UID).findMany({
+    where: { leader: leaderUserId },
+    populate: { colaborators: true },
+  });
+
+  const ids = new Set<string>();
+  for (const team of teams) {
+    const colaborators = team.colaborators as Array<{
+      documentId?: string;
+      document_id?: string;
+    }> | null;
+    for (const colaborator of colaborators ?? []) {
+      const documentId = readDocumentId(colaborator);
+      if (documentId) ids.add(documentId);
+    }
+  }
+  return ids;
+}
+
+async function resolveStaffActor(staffDocumentId: string): Promise<StaffActor | null> {
+  const knex = strapi.db.connection;
+  const rows = (await knex(USERS_TABLE)
+    .where({ document_id: staffDocumentId })
+    .select('id', 'document_id', 'role_type', 'blocked')
+    .limit(1)) as Array<{
+    id?: number;
+    document_id?: string;
+    role_type?: string;
+    blocked?: boolean | number;
+  }>;
+  const row = rows[0];
+  if (!row?.id) return null;
+  if (row.blocked === true || row.blocked === 1) return null;
+
+  const role = String(row.role_type ?? '');
+  if (role !== 'admin' && role !== 'manager' && role !== 'leader') {
+    return null;
+  }
+
+  return {
+    id: Number(row.id),
+    documentId: String(row.document_id ?? staffDocumentId),
+    role: role as KioskStaffActorRole,
+  };
+}
 
 type AssignedSubTaskDbRow = {
   id?: number;
@@ -219,6 +372,112 @@ export default {
         qty: stopResult.qty,
       },
     });
+  },
+
+  async listStaffColaborators(
+    staffDocumentId: string,
+  ): Promise<KioskColaboratorRow[]> {
+    const actor = await resolveStaffActor(staffDocumentId);
+    if (!actor) return [];
+
+    const colaborators = await fetchActiveColaboratorRows();
+    const teamIds =
+      actor.role === 'leader'
+        ? await fetchLeaderTeamColaboratorDocumentIds(actor.id)
+        : new Set<string>();
+
+    return mapColaboratorsWithAvatars(
+      filterColaboratorsForStaffRole(actor.role, colaborators, teamIds),
+    );
+  },
+
+  async setColaboratorPassword(
+    staffDocumentId: string,
+    colaboratorDocumentId: string,
+    password: string,
+  ): Promise<void> {
+    const { targetId } = await assertStaffCanManageColaborator(
+      staffDocumentId,
+      colaboratorDocumentId,
+    );
+
+    const userService = strapi.plugin('users-permissions').service('user');
+    await userService.edit(targetId, { password });
+  },
+
+  async setColaboratorAvatar(
+    staffDocumentId: string,
+    colaboratorDocumentId: string,
+    fileBuffer: Buffer,
+    mimeType: string,
+    fileName: string,
+  ): Promise<{ avatarUrl: string | null }> {
+    await assertStaffCanManageColaborator(staffDocumentId, colaboratorDocumentId);
+
+    const validation = validateKioskAvatarFile(
+      fileBuffer,
+      mimeType,
+      fileBuffer.length,
+    );
+    if (!validation.ok) {
+      throw new Error(validation.error);
+    }
+
+    const uploaded = await strapi.plugin('upload').service('upload').upload({
+      data: {
+        fileInfo: {
+          name: fileName,
+          alternativeText: 'Colaborator profile photo',
+        },
+      },
+      files: {
+        name: fileName,
+        type: mimeType,
+        size: fileBuffer.length,
+        buffer: fileBuffer,
+      },
+    });
+
+    const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+    const fileId = file?.id;
+    if (!fileId) throw new Error('uploadFailed');
+
+    await strapi.documents(USER_UID).update({
+      documentId: colaboratorDocumentId,
+      data: { avatar: fileId },
+    });
+
+    const avatarUrl = file?.url ? String(file.url) : await readColaboratorAvatarUrl(
+      colaboratorDocumentId,
+    );
+    return { avatarUrl };
+  },
+
+  async getStaffUserByDocumentId(
+    documentId: string,
+  ): Promise<{ documentId: string; role: string } | null> {
+    const knex = strapi.db.connection;
+    const rows = (await knex(USERS_TABLE)
+      .where({ document_id: documentId })
+      .select('document_id', 'role_type', 'blocked')
+      .limit(1)) as Array<{
+      document_id?: string;
+      role_type?: string;
+      blocked?: boolean | number;
+    }>;
+    const row = rows[0];
+    if (!row) return null;
+    if (row.blocked === true || row.blocked === 1) return null;
+
+    const role = String(row.role_type ?? '');
+    if (role !== 'admin' && role !== 'manager' && role !== 'leader') {
+      return null;
+    }
+
+    return {
+      documentId: String(row.document_id ?? documentId),
+      role,
+    };
   },
 };
 

@@ -2,6 +2,9 @@ import type { Core } from '@strapi/strapi';
 
 import { LOCAL_AUTH_PROVIDER } from './business/user-auth';
 import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
+import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idle';
+
+const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
 
 type ActionName = 'find' | 'findOne' | 'create' | 'update' | 'delete';
 type ApiName =
@@ -172,6 +175,43 @@ async function ensureUserPermissions(strapi: Core.Strapi, roleType: string, role
   }
 }
 
+async function ensureKioskSettingRecord(strapi: Core.Strapi) {
+  const existing = await strapi.documents(KIOSK_SETTING_UID).findFirst();
+  if (existing) return;
+  await strapi.documents(KIOSK_SETTING_UID).create({
+    data: { sessionIdleSeconds: DEFAULT_KIOSK_SESSION_IDLE_SECONDS },
+  });
+}
+
+async function ensureKioskSettingPermissions(strapi: Core.Strapi) {
+  const adminRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'admin' } });
+  const kioskRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'kiosk' } });
+
+  if (adminRole) {
+    await ensurePermission(
+      strapi,
+      adminRole.id,
+      'api::kiosk-setting.kiosk-setting.find',
+    );
+    await ensurePermission(
+      strapi,
+      adminRole.id,
+      'api::kiosk-setting.kiosk-setting.update',
+    );
+  }
+  if (kioskRole) {
+    await ensurePermission(
+      strapi,
+      kioskRole.id,
+      'api::kiosk-setting.kiosk-setting.find',
+    );
+  }
+}
+
 async function backfillUserRoleTypes(strapi: Core.Strapi) {
   const users = await strapi.db.query('plugin::users-permissions.user').findMany({
     populate: ['role'],
@@ -206,6 +246,8 @@ export default {
     }
     await ensureSuperAdminCanReadUpRoles(strapi);
     await ensureExistingUsersHaveLocalProvider(strapi);
+    await ensureKioskSettingRecord(strapi);
+    await ensureKioskSettingPermissions(strapi);
     await backfillUserRoleTypes(strapi);
     strapi.log.info('[pixtrela] roles and permissions ensured');
   },
