@@ -13,15 +13,17 @@ RUN npm run build
 
 # Stage 2: Runtime
 FROM node:20-slim
-RUN apt-get update && apt-get install -y libvips-dev \
+RUN apt-get update && apt-get install -y libvips-dev gosu \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/
 COPY --from=build /opt/node_modules ./node_modules
 WORKDIR /opt/app
 COPY --from=build /opt/app ./
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+  && chown -R node:node /opt/app
 ENV PATH=/opt/node_modules/.bin:$PATH
 ENV NODE_ENV=production
-RUN chown -R node:node /opt/app
-USER node
 EXPOSE 1337
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]
