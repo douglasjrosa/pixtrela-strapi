@@ -1,3 +1,7 @@
+import { promises as fs } from 'fs';
+import os from 'os';
+import path from 'path';
+
 import { calculateActivityDurationSeconds } from '../../../business/activity-duration';
 import {
   validateKioskAvatarFile,
@@ -423,23 +427,38 @@ export default {
       throw new Error(validation.error);
     }
 
-    const uploaded = await strapi.plugin('upload').service('upload').upload({
-      data: {
-        fileInfo: {
-          name: fileName,
-          alternativeText: 'Colaborator profile photo',
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'kiosk-avatar-'));
+    const safeName =
+      fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'avatar.jpg';
+    const tmpPath = path.join(tmpDir, safeName);
+
+    let uploaded: unknown;
+    try {
+      await fs.writeFile(tmpPath, fileBuffer);
+      uploaded = await strapi.plugin('upload').service('upload').upload({
+        data: {
+          fileInfo: {
+            name: fileName,
+            alternativeText: 'Colaborator profile photo',
+          },
         },
-      },
-      files: {
-        name: fileName,
-        type: mimeType,
-        size: fileBuffer.length,
-        buffer: fileBuffer,
-      },
-    });
+        files: {
+          filepath: tmpPath,
+          originalFilename: fileName,
+          mimetype: mimeType,
+          size: fileBuffer.length,
+        },
+      });
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error ? uploadError.message : 'uploadException';
+      throw new Error(`uploadFailed:${message}`);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
 
     const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
-    const fileId = file?.id;
+    const fileId = (file as { id?: number } | null)?.id;
     if (!fileId) throw new Error('uploadFailed');
 
     await strapi.documents(USER_UID).update({
@@ -447,9 +466,10 @@ export default {
       data: { avatar: fileId },
     });
 
-    const avatarUrl = file?.url ? String(file.url) : await readColaboratorAvatarUrl(
-      colaboratorDocumentId,
-    );
+    const fileUrl = (file as { url?: string } | null)?.url;
+    const avatarUrl = fileUrl
+      ? String(fileUrl)
+      : await readColaboratorAvatarUrl(colaboratorDocumentId);
     return { avatarUrl };
   },
 

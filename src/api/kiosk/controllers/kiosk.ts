@@ -162,7 +162,7 @@ export default {
         message === 'invalidType' ||
         message === 'tooLarge' ||
         message === 'empty' ||
-        message === 'uploadFailed'
+        message.startsWith('uploadFailed')
       ) {
         return ctx.badRequest(message);
       }
