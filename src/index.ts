@@ -7,6 +7,8 @@ import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
 import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idle';
 
 const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
+const TASK_AUTOMATION_SETTING_UID =
+  'api::task-automation-setting.task-automation-setting';
 
 type ActionName = 'find' | 'findOne' | 'create' | 'update' | 'delete';
 type ApiName =
@@ -214,6 +216,45 @@ async function ensureKioskSettingPermissions(strapi: Core.Strapi) {
   }
 }
 
+async function ensureTaskAutomationSettingRecord(strapi: Core.Strapi) {
+  const existing = await strapi.documents(TASK_AUTOMATION_SETTING_UID).findFirst();
+  if (existing) return;
+  await strapi.documents(TASK_AUTOMATION_SETTING_UID).create({ data: {} });
+}
+
+async function ensureTaskAutomationSettingPermissions(strapi: Core.Strapi) {
+  const adminRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'admin' } });
+
+  if (!adminRole) return;
+
+  await ensurePermission(
+    strapi,
+    adminRole.id,
+    'api::task-automation-setting.task-automation-setting.find',
+  );
+  await ensurePermission(
+    strapi,
+    adminRole.id,
+    'api::task-automation-setting.task-automation-setting.update',
+  );
+}
+
+async function ensureDashboardPermissions(strapi: Core.Strapi, roleType: string, roleId: number) {
+  if (roleType === 'kiosk') return;
+
+  const actions = [
+    'api::dashboard.dashboard.monthlyRanking',
+    'api::dashboard.dashboard.listColaborators',
+    'api::dashboard.dashboard.colaboratorInsights',
+  ];
+
+  for (const action of actions) {
+    await ensurePermission(strapi, roleId, action);
+  }
+}
+
 async function backfillUserRoleTypes(strapi: Core.Strapi) {
   const users = await strapi.db.query('plugin::users-permissions.user').findMany({
     populate: ['role'],
@@ -245,11 +286,14 @@ export default {
       await ensureUserPermissions(strapi, roleDef.type, role.id);
       await ensureUploadPermissions(strapi, roleDef.type, role.id);
       await ensureRoleReadPermissions(strapi, roleDef.type, role.id);
+      await ensureDashboardPermissions(strapi, roleDef.type, role.id);
     }
     await ensureSuperAdminCanReadUpRoles(strapi);
     await ensureExistingUsersHaveLocalProvider(strapi);
     await ensureKioskSettingRecord(strapi);
     await ensureKioskSettingPermissions(strapi);
+    await ensureTaskAutomationSettingRecord(strapi);
+    await ensureTaskAutomationSettingPermissions(strapi);
     await backfillUserRoleTypes(strapi);
     await migrateQueuedStatusToWaiting(strapi.db.connection);
     strapi.log.info('[pixtrela] roles and permissions ensured');

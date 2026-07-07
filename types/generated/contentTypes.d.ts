@@ -740,6 +740,39 @@ export interface ApiSubTaskSubTask extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiTaskAutomationSettingTaskAutomationSetting
+  extends Struct.SingleTypeSchema {
+  collectionName: 'task_automation_settings';
+  info: {
+    description: 'Maps task statuses to kanban steps';
+    displayName: 'Task Automation Setting';
+    pluralName: 'task-automation-settings';
+    singularName: 'task-automation-setting';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    finishedStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::task-automation-setting.task-automation-setting'
+    > &
+      Schema.Attribute.Private;
+    pausedStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
+    producingStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    waitingStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
+  };
+}
+
 export interface ApiTaskTask extends Struct.CollectionTypeSchema {
   collectionName: 'tasks';
   info: {
@@ -1378,6 +1411,7 @@ declare module '@strapi/strapi' {
       'api::kiosk-setting.kiosk-setting': ApiKioskSettingKioskSetting;
       'api::step.step': ApiStepStep;
       'api::sub-task.sub-task': ApiSubTaskSubTask;
+      'api::task-automation-setting.task-automation-setting': ApiTaskAutomationSettingTaskAutomationSetting;
       'api::task.task': ApiTaskTask;
       'api::team.team': ApiTeamTeam;
       'api::template-task.template-task': ApiTemplateTaskTemplateTask;

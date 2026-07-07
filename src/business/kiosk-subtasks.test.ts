@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildFinishedAtBySubTaskId,
   buildStartedAtBySubTaskId,
   filterKioskVisibleSubTasks,
   isVisibleOnKiosk,
@@ -36,6 +37,11 @@ describe('mapSubTaskDbRow', () => {
       sharingType: 'duration',
       timeSpent: 0,
       startedAt: null,
+      expectedTime: 0,
+      taskDocumentId: '',
+      taskName: '',
+      taskIndex: 0,
+      finishedAt: null,
     });
   });
 
@@ -78,6 +84,18 @@ describe('buildStartedAtBySubTaskId', () => {
       { subTaskId: 2, timestamp: '2026-06-05T11:00:00.000Z' },
     ]);
     expect(map.get(1)).toBe('2026-06-05T10:00:00.000Z');
+    expect(map.get(2)).toBe('2026-06-05T11:00:00.000Z');
+  });
+});
+
+describe('buildFinishedAtBySubTaskId', () => {
+  it('keeps the latest stoped timestamp per subtask id', () => {
+    const map = buildFinishedAtBySubTaskId([
+      { subTaskId: 1, timestamp: '2026-06-05T10:00:00.000Z' },
+      { subTaskId: 1, timestamp: '2026-06-05T12:00:00.000Z' },
+      { subTaskId: 2, timestamp: '2026-06-05T11:00:00.000Z' },
+    ]);
+    expect(map.get(1)).toBe('2026-06-05T12:00:00.000Z');
     expect(map.get(2)).toBe('2026-06-05T11:00:00.000Z');
   });
 });

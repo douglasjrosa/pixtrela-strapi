@@ -3,6 +3,7 @@ import {
   resolveTaskStatusFromSubTasks,
   type TaskStatus,
 } from '../../../../business/task-completion';
+import { shouldSetTaskStartedAt } from '../../../../business/task-started-at';
 
 const SUB_TASK_UID = 'api::sub-task.sub-task';
 const TASK_UID = 'api::task.task';
@@ -33,7 +34,7 @@ async function syncParentTaskCompletionForTask(
 ): Promise<void> {
   const task = await strapi.documents(TASK_UID).findOne({
     documentId: taskDocumentId,
-    fields: ['status', 'endedAt'],
+    fields: ['status', 'endedAt', 'startedAt'],
   });
   if (!task) return;
 
@@ -50,7 +51,9 @@ async function syncParentTaskCompletionForTask(
   const nextStatus = resolveTaskStatusFromSubTasks(inputs);
   const currentStatus = String(task.status ?? '');
 
-  if (nextStatus === currentStatus) return;
+  if (nextStatus === currentStatus && !shouldSetTaskStartedAt(nextStatus, task.startedAt)) {
+    return;
+  }
 
   if (nextStatus === FINISHED_STATUS) {
     await strapi.documents(TASK_UID).update({
@@ -63,12 +66,22 @@ async function syncParentTaskCompletionForTask(
     return;
   }
 
+  const updateData: {
+    status: TaskStatus;
+    endedAt: null;
+    startedAt?: Date;
+  } = {
+    status: nextStatus,
+    endedAt: null,
+  };
+
+  if (shouldSetTaskStartedAt(nextStatus, task.startedAt)) {
+    updateData.startedAt = new Date();
+  }
+
   await strapi.documents(TASK_UID).update({
     documentId: taskDocumentId,
-    data: {
-      status: nextStatus,
-      endedAt: null,
-    },
+    data: updateData,
   });
 }
 

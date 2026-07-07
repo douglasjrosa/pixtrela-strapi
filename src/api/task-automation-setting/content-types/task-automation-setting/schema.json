@@ -1,0 +1,35 @@
+{
+  "kind": "singleType",
+  "collectionName": "task_automation_settings",
+  "info": {
+    "singularName": "task-automation-setting",
+    "pluralName": "task-automation-settings",
+    "displayName": "Task Automation Setting",
+    "description": "Maps task statuses to kanban steps"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "waitingStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
+    "producingStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
+    "pausedStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
+    "finishedStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    }
+  }
+}

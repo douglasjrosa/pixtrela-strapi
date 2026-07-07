@@ -5,6 +5,8 @@ import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from '../src/business/kiosk-sessio
 const CURRENCY_UID = 'api::currency.currency';
 const STEP_UID = 'api::step.step';
 const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
+const TASK_AUTOMATION_SETTING_UID =
+  'api::task-automation-setting.task-automation-setting';
 
 const DEFAULT_CURRENCY = {
   name: 'star',
@@ -48,6 +50,13 @@ async function seed() {
     await app.documents(KIOSK_SETTING_UID).create({
       data: { sessionIdleSeconds: DEFAULT_KIOSK_SESSION_IDLE_SECONDS },
     });
+  }
+
+  const taskAutomationSetting = await app
+    .documents(TASK_AUTOMATION_SETTING_UID)
+    .findFirst();
+  if (!taskAutomationSetting) {
+    await app.documents(TASK_AUTOMATION_SETTING_UID).create({ data: {} });
   }
 
   app.log.info('[pixtrela] seed complete');

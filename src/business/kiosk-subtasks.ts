@@ -1,8 +1,9 @@
-const FINISHED_STATUS = 'finished';
 const DISABLED_ACTIVATION_STATUS = 'disabled';
 
 export const SUB_TASKS_TABLE = 'sub_tasks';
 export const SUB_TASK_ASSIGNED_LINK_TABLE = 'sub_tasks_assigned_to_lnk';
+export const SUB_TASK_TASK_LINK_TABLE = 'sub_tasks_task_lnk';
+export const TASKS_TABLE = 'tasks';
 export const USERS_TABLE = 'up_users';
 
 export type KioskSubTaskRow = {
@@ -16,6 +17,11 @@ export type KioskSubTaskRow = {
   sharingType: 'qty' | 'duration';
   timeSpent: number;
   startedAt: string | null;
+  expectedTime: number;
+  taskDocumentId: string;
+  taskName: string;
+  taskIndex: number;
+  finishedAt: string | null;
 };
 
 type UserDocumentRef = {
@@ -36,6 +42,14 @@ type SubTaskDbRow = {
   sharingType?: string;
   time_spent?: number;
   timeSpent?: number;
+  expected_time?: number;
+  expectedTime?: number;
+  task_document_id?: string;
+  taskDocumentId?: string;
+  task_name?: string;
+  taskName?: string;
+  task_index?: number;
+  taskIndex?: number;
 };
 
 type OpenActivityRef = {
@@ -67,6 +81,7 @@ export function mapSubTaskDbRow(
   row: SubTaskDbRow,
   startedAt: string | null = null,
   completedQty = 0,
+  finishedAt: string | null = null,
 ): KioskSubTaskRow {
   const sharingType = row.sharingType ?? row.sharing_type;
   return {
@@ -80,6 +95,11 @@ export function mapSubTaskDbRow(
     sharingType: sharingType === 'qty' ? 'qty' : 'duration',
     timeSpent: Number(row.timeSpent ?? row.time_spent ?? 0),
     startedAt,
+    expectedTime: Number(row.expectedTime ?? row.expected_time ?? 0),
+    taskDocumentId: String(row.taskDocumentId ?? row.task_document_id ?? ''),
+    taskName: String(row.taskName ?? row.task_name ?? ''),
+    taskIndex: Number(row.taskIndex ?? row.task_index ?? 0),
+    finishedAt,
   };
 }
 
@@ -89,16 +109,25 @@ export function filterKioskVisibleSubTasks<T extends { activationStatus?: string
   return rows.filter((row) => isVisibleOnKiosk(row.activationStatus));
 }
 
-export function isActiveKioskSubTask(status: string | undefined): boolean {
-  return status !== FINISHED_STATUS;
-}
-
 export function buildStartedAtBySubTaskId(
   activities: OpenActivityRef[],
 ): Map<number, string> {
   const map = new Map<number, string>();
   for (const activity of activities) {
     if (!map.has(activity.subTaskId)) {
+      map.set(activity.subTaskId, activity.timestamp);
+    }
+  }
+  return map;
+}
+
+export function buildFinishedAtBySubTaskId(
+  activities: Array<{ subTaskId: number; timestamp: string }>,
+): Map<number, string> {
+  const map = new Map<number, string>();
+  for (const activity of activities) {
+    const current = map.get(activity.subTaskId);
+    if (!current || activity.timestamp > current) {
       map.set(activity.subTaskId, activity.timestamp);
     }
   }

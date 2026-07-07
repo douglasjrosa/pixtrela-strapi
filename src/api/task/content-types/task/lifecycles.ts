@@ -5,6 +5,7 @@ import {
   shouldCopyTemplateSubtasks,
   type TemplateSubTaskComponent,
 } from '../../../../business/copy-template-subtasks';
+import { applyTaskStepForStatusChange } from '../../../../business/task-step-automation';
 
 const TASK_UID = 'api::task.task';
 const TASK_SERVICE_UID = 'api::task.task';
@@ -36,6 +37,15 @@ function isComputedOnlyUpdate(data: Record<string, unknown> | undefined): boolea
  * into SubTask records linked to the new task.
  */
 export default {
+  async beforeUpdate(event: {
+    params: { documentId?: string; data?: Record<string, unknown> };
+  }) {
+    const documentId = event.params.documentId;
+    const data = event.params.data;
+    if (!documentId || !data) return;
+    await applyTaskStepForStatusChange(documentId, data);
+  },
+
   async afterCreate(event: { result: { documentId?: string } }) {
     const taskDocumentId = event.result?.documentId;
     if (!taskDocumentId) return;
