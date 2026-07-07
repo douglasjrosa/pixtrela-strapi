@@ -53,9 +53,9 @@
     "status": {
       "type": "enumeration",
       "required": true,
-      "default": "queued",
+      "default": "waiting",
       "enum": [
-        "queued",
+        "waiting",
         "producing",
         "paused",
         "finished"

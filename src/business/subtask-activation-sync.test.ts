@@ -18,7 +18,7 @@ const NO_ACTIVE_WORKERS: Pick<
 describe('areAllDependencySubTasksFinished', () => {
   const siblings = new Map([
     ['a', { status: 'finished', documentId: 'a', dependencies: [] }],
-    ['b', { status: 'queued', documentId: 'b', dependencies: [] }],
+    ['b', { status: 'waiting', documentId: 'b', dependencies: [] }],
   ]);
 
   it('returns true when there are no dependencies', () => {
@@ -47,7 +47,7 @@ describe('computeAutomaticActivationStatus', () => {
       'assembly',
       {
         documentId: 'assembly',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'locked',
         dependencies: ['cut'],
         ...NO_ACTIVE_WORKERS,
@@ -57,7 +57,7 @@ describe('computeAutomaticActivationStatus', () => {
       'disabled-row',
       {
         documentId: 'disabled-row',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'disabled',
         dependencies: ['cut'],
         ...NO_ACTIVE_WORKERS,
@@ -74,7 +74,7 @@ describe('computeAutomaticActivationStatus', () => {
   it('locks when a dependency is not finished', () => {
     const waiting: SubTaskActivationSyncRow = {
       documentId: 'wait',
-      status: 'queued',
+      status: 'waiting',
       activationStatus: 'locked',
       dependencies: ['assembly'],
       ...NO_ACTIVE_WORKERS,
@@ -93,7 +93,7 @@ describe('computeAutomaticActivationStatus', () => {
   it('unlocks sub-tasks without dependencies when not finished', () => {
     const standalone: SubTaskActivationSyncRow = {
       documentId: 'solo',
-      status: 'queued',
+      status: 'waiting',
       activationStatus: 'locked',
       dependencies: [],
       ...NO_ACTIVE_WORKERS,
@@ -111,7 +111,7 @@ describe('computeAutomaticActivationStatus', () => {
   it('locks dual-worker sub-tasks when two colaborators are active', () => {
     const dualWorker: SubTaskActivationSyncRow = {
       documentId: 'dual',
-      status: 'queued',
+      status: 'waiting',
       activationStatus: 'unlocked',
       dependencies: [],
       maxSameTimeWorkers: 2,
@@ -124,7 +124,7 @@ describe('computeAutomaticActivationStatus', () => {
   it('unlocks dual-worker sub-tasks when one colaborator leaves', () => {
     const dualWorker: SubTaskActivationSyncRow = {
       documentId: 'dual',
-      status: 'queued',
+      status: 'waiting',
       activationStatus: 'locked',
       dependencies: [],
       maxSameTimeWorkers: 2,
@@ -147,14 +147,14 @@ describe('resolveSubTaskActivationStatusUpdates', () => {
       },
       {
         documentId: 'b',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'locked',
         dependencies: ['a'],
         ...NO_ACTIVE_WORKERS,
       },
       {
         documentId: 'c',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'disabled',
         dependencies: ['a'],
         ...NO_ACTIVE_WORKERS,
@@ -168,14 +168,14 @@ describe('resolveSubTaskActivationStatusUpdates', () => {
     const updates = resolveSubTaskActivationStatusUpdates([
       {
         documentId: 'a',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'unlocked',
         dependencies: ['b'],
         ...NO_ACTIVE_WORKERS,
       },
       {
         documentId: 'b',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'locked',
         dependencies: [],
         ...NO_ACTIVE_WORKERS,

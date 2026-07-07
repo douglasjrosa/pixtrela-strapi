@@ -73,7 +73,7 @@ export function mapSubTaskDbRow(
     documentId: String(row.documentId ?? row.document_id ?? ''),
     name: String(row.name ?? ''),
     index: Number(row.index ?? 0),
-    status: String(row.status ?? 'queued'),
+    status: String(row.status ?? 'waiting'),
     activationStatus: readActivationStatus(row),
     qty: Number(row.qty ?? 1),
     completedQty: Math.max(0, completedQty),

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertKioskJwt,
+  assertKioskOrAdminJwt,
   assertKioskOrStaffJwt,
   resolveColaboratorUserId,
   resolveJwtUserId,
@@ -42,6 +43,34 @@ describe('assertKioskJwt', () => {
     });
 
     await expect(assertKioskJwt(knex as never, 1)).rejects.toThrow('forbidden');
+  });
+});
+
+describe('assertKioskOrAdminJwt', () => {
+  it('allows kiosk and admin roles', async () => {
+    const kioskKnex = () => ({
+      where: () => ({
+        select: async () => [{ role_type: 'kiosk' }],
+      }),
+    });
+    const adminKnex = () => ({
+      where: () => ({
+        select: async () => [{ role_type: 'admin' }],
+      }),
+    });
+
+    await expect(assertKioskOrAdminJwt(kioskKnex as never, 1)).resolves.toBe('kiosk');
+    await expect(assertKioskOrAdminJwt(adminKnex as never, 2)).resolves.toBe('admin');
+  });
+
+  it('rejects manager and colaborator roles', async () => {
+    const knex = () => ({
+      where: () => ({
+        select: async () => [{ role_type: 'manager' }],
+      }),
+    });
+
+    await expect(assertKioskOrAdminJwt(knex as never, 1)).rejects.toThrow('forbidden');
   });
 });
 

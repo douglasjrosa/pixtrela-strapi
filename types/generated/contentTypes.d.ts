@@ -728,10 +728,10 @@ export interface ApiSubTaskSubTask extends Struct.CollectionTypeSchema {
     sharingType: Schema.Attribute.Enumeration<['qty', 'duration']> &
       Schema.Attribute.DefaultTo<'duration'>;
     status: Schema.Attribute.Enumeration<
-      ['queued', 'producing', 'paused', 'finished']
+      ['waiting', 'producing', 'paused', 'finished']
     > &
       Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'queued'>;
+      Schema.Attribute.DefaultTo<'waiting'>;
     task: Schema.Attribute.Relation<'manyToOne', 'api::task.task'>;
     timeSpent: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     updatedAt: Schema.Attribute.DateTime;
@@ -756,6 +756,8 @@ export interface ApiTaskTask extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    crmItemKey: Schema.Attribute.String;
+    crmPedidoId: Schema.Attribute.Integer;
     deliveryDate: Schema.Attribute.Date;
     endedAt: Schema.Attribute.DateTime;
     index: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
@@ -767,10 +769,10 @@ export interface ApiTaskTask extends Struct.CollectionTypeSchema {
     qty: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
     startedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
-      ['queued', 'producing', 'paused', 'finished']
+      ['waiting', 'producing', 'paused', 'finished']
     > &
       Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'queued'>;
+      Schema.Attribute.DefaultTo<'waiting'>;
     step: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     subTasks: Schema.Attribute.Relation<'oneToMany', 'api::sub-task.sub-task'>;
     templateTaskCode: Schema.Attribute.String;

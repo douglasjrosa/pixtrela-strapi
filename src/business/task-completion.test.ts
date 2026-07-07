@@ -14,7 +14,7 @@ describe('areAllSubTasksFinished', () => {
     expect(
       areAllSubTasksFinished([
         { status: 'finished' },
-        { status: 'queued' },
+        { status: 'waiting' },
       ]),
     ).toBe(false);
   });
@@ -32,7 +32,7 @@ describe('areAllSubTasksFinished', () => {
     expect(
       areAllSubTasksFinished([
         { status: 'finished', activationStatus: 'unlocked' },
-        { status: 'queued', activationStatus: 'disabled' },
+        { status: 'waiting', activationStatus: 'disabled' },
       ]),
     ).toBe(true);
   });
@@ -40,7 +40,7 @@ describe('areAllSubTasksFinished', () => {
   it('returns false when only disabled sub-tasks remain', () => {
     expect(
       areAllSubTasksFinished([
-        { status: 'queued', activationStatus: 'disabled' },
+        { status: 'waiting', activationStatus: 'disabled' },
       ]),
     ).toBe(false);
   });
@@ -51,8 +51,8 @@ describe('resolveTaskStatusFromSubTasks', () => {
     expect(
       resolveTaskStatusFromSubTasks([
         { status: 'finished', activationStatus: 'unlocked' },
-        { status: 'queued', activationStatus: 'locked' },
+        { status: 'waiting', activationStatus: 'locked' },
       ]),
-    ).toBe('queued');
+    ).toBe('waiting');
   });
 });

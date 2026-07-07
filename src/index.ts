@@ -1,5 +1,7 @@
 import type { Core } from '@strapi/strapi';
 
+import { migrateQueuedStatusToWaiting } from './business/migrate-task-status';
+
 import { LOCAL_AUTH_PROVIDER } from './business/user-auth';
 import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
 import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idle';
@@ -249,6 +251,7 @@ export default {
     await ensureKioskSettingRecord(strapi);
     await ensureKioskSettingPermissions(strapi);
     await backfillUserRoleTypes(strapi);
+    await migrateQueuedStatusToWaiting(strapi.db.connection);
     strapi.log.info('[pixtrela] roles and permissions ensured');
   },
 };

@@ -2,7 +2,7 @@ import { filterSubTasksCountedForTask } from './sub-task-task-scope';
 
 const FINISHED_STATUS = 'finished';
 
-export type TaskStatus = 'queued' | 'producing' | 'paused' | 'finished';
+export type TaskStatus = 'waiting' | 'producing' | 'paused' | 'finished';
 
 export type SubTaskForTaskCompletion = {
   status: string;
@@ -25,7 +25,7 @@ export function resolveTaskStatusFromSubTasks(
   subTasks: SubTaskForTaskCompletion[],
 ): TaskStatus {
   const counted = filterSubTasksCountedForTask(subTasks);
-  if (counted.length === 0) return 'queued';
+  if (counted.length === 0) return 'waiting';
   if (areAllSubTasksFinished(counted)) return FINISHED_STATUS;
   if (counted.some((subTask) => subTask.status === 'producing')) {
     return 'producing';
@@ -33,5 +33,5 @@ export function resolveTaskStatusFromSubTasks(
   if (counted.some((subTask) => subTask.status === 'paused')) {
     return 'paused';
   }
-  return 'queued';
+  return 'waiting';
 }

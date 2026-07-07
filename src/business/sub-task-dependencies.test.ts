@@ -20,7 +20,7 @@ describe('parseSubTaskDependencyIds', () => {
 describe('areSubTaskDependenciesSatisfied', () => {
   const siblings = new Map([
     ['a', { status: 'finished' }],
-    ['b', { status: 'queued' }],
+    ['b', { status: 'waiting' }],
   ]);
 
   it('returns true when every dependency is finished', () => {
@@ -48,13 +48,13 @@ describe('findLockedSubTasksToUnlock', () => {
       },
       {
         documentId: 'b',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'locked',
         dependencies: ['a'],
       },
       {
         documentId: 'c',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'locked',
         dependencies: ['a', 'b'],
       },
@@ -73,7 +73,7 @@ describe('findLockedSubTasksToUnlock', () => {
       },
       {
         documentId: 'b',
-        status: 'queued',
+        status: 'waiting',
         activationStatus: 'unlocked',
         dependencies: ['a'],
       },

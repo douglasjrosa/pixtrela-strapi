@@ -25,7 +25,7 @@ describe('parseQtyStopBody', () => {
 describe('resolveQtyStop', () => {
   it('finishes when global cumulative qty reaches sub-task qty', () => {
     expect(resolveQtyStop(10, 7, 3)).toEqual({ qty: 3, subTaskStatus: 'finished' });
-    expect(resolveQtyStop(10, 7, 2)).toEqual({ qty: 2, subTaskStatus: 'queued' });
+    expect(resolveQtyStop(10, 7, 2)).toEqual({ qty: 2, subTaskStatus: 'waiting' });
   });
 
   it('counts qty from every colaborator toward completion', () => {
@@ -41,6 +41,6 @@ describe('resolveQtyStop', () => {
 describe('resolveDurationStop', () => {
   it('returns finished or queued based on reported completion', () => {
     expect(resolveDurationStop(true)).toEqual({ qty: 0, subTaskStatus: 'finished' });
-    expect(resolveDurationStop(false)).toEqual({ qty: 0, subTaskStatus: 'queued' });
+    expect(resolveDurationStop(false)).toEqual({ qty: 0, subTaskStatus: 'waiting' });
   });
 });

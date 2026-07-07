@@ -291,7 +291,7 @@ export default {
     if (subTask.activationStatus !== UNLOCKED_ACTIVATION_STATUS) {
       throw new Error('forbidden');
     }
-    if (subTask.status !== 'queued') throw new Error('forbidden');
+    if (subTask.status !== 'waiting') throw new Error('forbidden');
 
     await strapi.db.query(ACTIVITY_UID).create({
       data: {

@@ -82,7 +82,7 @@ export default factories.createCoreService(TASK_UID, ({ strapi }) => {
     const activitiesBySubTask = toActivityRows(activities);
     const inputs: SubTaskTimeSpentInput[] = subTasks.map((subTask) => ({
       timeSpent: Number(subTask.timeSpent ?? 0),
-      status: String(subTask.status ?? 'queued'),
+      status: String(subTask.status ?? 'waiting'),
       activities: activitiesBySubTask.get(Number(subTask.id)) ?? [],
     }));
 

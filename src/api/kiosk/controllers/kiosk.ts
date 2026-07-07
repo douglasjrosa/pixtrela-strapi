@@ -6,6 +6,7 @@ import {
 } from '../../../business/kiosk-identify';
 import {
   assertKioskJwt,
+  assertKioskOrAdminJwt,
   resolveJwtUserId,
 } from '../../../business/kiosk-jwt';
 import {
@@ -28,6 +29,25 @@ async function verifyKioskJwtFromCtx(
   const knex = strapi.db.connection;
   try {
     await assertKioskJwt(knex, jwtUserId);
+  } catch {
+    return null;
+  }
+
+  return jwtUserId;
+}
+
+async function verifyKioskOrAdminJwtFromCtx(
+  ctx: { request: { headers?: { authorization?: string } } },
+): Promise<number | null> {
+  const jwtUserId = await resolveJwtUserId(
+    ctx.request.headers?.authorization,
+    (token) => strapi.plugin('users-permissions').service('jwt').verify(token),
+  );
+  if (!jwtUserId) return null;
+
+  const knex = strapi.db.connection;
+  try {
+    await assertKioskOrAdminJwt(knex, jwtUserId);
   } catch {
     return null;
   }
@@ -189,7 +209,7 @@ export default {
     const { documentId } = ctx.params;
     if (!documentId) return ctx.badRequest('documentId required');
 
-    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    const jwtUserId = await verifyKioskOrAdminJwtFromCtx(ctx);
     if (!jwtUserId) return ctx.unauthorized();
 
     const data = await strapi

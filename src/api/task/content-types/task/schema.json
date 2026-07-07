@@ -44,12 +44,12 @@
     "status": {
       "type": "enumeration",
       "enum": [
-        "queued",
+        "waiting",
         "producing",
         "paused",
         "finished"
       ],
-      "default": "queued",
+      "default": "waiting",
       "required": true
     },
     "totalExpectedTime": {
@@ -61,6 +61,12 @@
       "default": 0
     },
     "templateTaskCode": {
+      "type": "string"
+    },
+    "crmPedidoId": {
+      "type": "integer"
+    },
+    "crmItemKey": {
       "type": "string"
     },
     "subTasks": {

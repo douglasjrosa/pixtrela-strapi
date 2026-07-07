@@ -1,6 +1,6 @@
 export type SharingType = 'qty' | 'duration';
 
-export type SubTaskStatus = 'finished' | 'queued';
+export type SubTaskStatus = 'finished' | 'waiting';
 
 export interface KioskStopBody {
   completed?: boolean;
@@ -32,7 +32,7 @@ export function parseQtyStopBody(body: KioskStopBody): number {
 export function resolveDurationStop(reportedCompleted: boolean): KioskStopResult {
   return {
     qty: 0,
-    subTaskStatus: reportedCompleted ? 'finished' : 'queued',
+    subTaskStatus: reportedCompleted ? 'finished' : 'waiting',
   };
 }
 
@@ -52,6 +52,6 @@ export function resolveQtyStop(
   const totalCompleted = totalCompletedQty + sessionQty;
   return {
     qty: sessionQty,
-    subTaskStatus: totalCompleted >= targetQty ? 'finished' : 'queued',
+    subTaskStatus: totalCompleted >= targetQty ? 'finished' : 'waiting',
   };
 }

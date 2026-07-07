@@ -46,6 +46,16 @@ export async function assertKioskJwt(knex: KnexLike, jwtUserId: number): Promise
   if (roleType !== KIOSK_ROLE_TYPE) throw new Error('forbidden');
 }
 
+export async function assertKioskOrAdminJwt(
+  knex: KnexLike,
+  jwtUserId: number,
+): Promise<'kiosk' | 'admin'> {
+  const roleType = await readUserRoleType(knex, jwtUserId);
+  if (roleType === KIOSK_ROLE_TYPE) return 'kiosk';
+  if (roleType === 'admin') return 'admin';
+  throw new Error('forbidden');
+}
+
 export async function assertKioskOrStaffJwt(
   knex: KnexLike,
   jwtUserId: number,

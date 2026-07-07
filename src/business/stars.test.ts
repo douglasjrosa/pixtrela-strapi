@@ -27,6 +27,6 @@ describe('shouldCreditStars', () => {
   });
 
   it('does not credit when stopped but sub-task is not finished', () => {
-    expect(shouldCreditStars({ action: 'stoped', subTaskStatus: 'queued' })).toBe(false);
+    expect(shouldCreditStars({ action: 'stoped', subTaskStatus: 'waiting' })).toBe(false);
   });
 });

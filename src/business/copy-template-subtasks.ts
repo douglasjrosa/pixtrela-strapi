@@ -4,7 +4,7 @@ const DEFAULT_INDEX = 0;
 const DEFAULT_EXPECTED_TIME = 0;
 const DEFAULT_TIME_SPENT = 0;
 const DEFAULT_SHARING_TYPE = 'duration' as const;
-const DEFAULT_STATUS = 'queued' as const;
+const DEFAULT_STATUS = 'waiting' as const;
 const DEFAULT_ACTIVATION_STATUS = 'locked' as const;
 
 export type JsonValue =
