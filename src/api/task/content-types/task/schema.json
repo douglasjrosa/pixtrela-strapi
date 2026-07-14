@@ -19,6 +19,9 @@
       "type": "boolean",
       "default": true
     },
+    "reasonForDeactivation": {
+      "type": "text"
+    },
     "qty": {
       "type": "integer",
       "default": 1

@@ -683,6 +683,42 @@ export interface ApiStepStep extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiSubTaskPresetSubTaskPreset extends Struct.CollectionTypeSchema {
+  collectionName: 'sub_task_presets';
+  info: {
+    description: 'Quick-fill preset for creating subtasks (no relation to SubTask)';
+    displayName: 'SubTaskPreset';
+    pluralName: 'sub-task-presets';
+    singularName: 'sub-task-preset';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    expectedTime: Schema.Attribute.Integer & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::sub-task-preset.sub-task-preset'
+    > &
+      Schema.Attribute.Private;
+    maxSameTimeWorkers: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<2>;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    sharingType: Schema.Attribute.Enumeration<['qty', 'duration']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'qty'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiSubTaskSubTask extends Struct.CollectionTypeSchema {
   collectionName: 'sub_tasks';
   info: {
@@ -800,6 +836,7 @@ export interface ApiTaskTask extends Struct.CollectionTypeSchema {
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     qty: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
+    reasonForDeactivation: Schema.Attribute.Text;
     startedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
       ['waiting', 'producing', 'paused', 'finished']
@@ -1410,6 +1447,7 @@ declare module '@strapi/strapi' {
       'api::exchange.exchange': ApiExchangeExchange;
       'api::kiosk-setting.kiosk-setting': ApiKioskSettingKioskSetting;
       'api::step.step': ApiStepStep;
+      'api::sub-task-preset.sub-task-preset': ApiSubTaskPresetSubTaskPreset;
       'api::sub-task.sub-task': ApiSubTaskSubTask;
       'api::task-automation-setting.task-automation-setting': ApiTaskAutomationSettingTaskAutomationSetting;
       'api::task.task': ApiTaskTask;

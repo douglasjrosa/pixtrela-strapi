@@ -19,6 +19,7 @@ type ApiName =
   | 'template-task'
   | 'task'
   | 'sub-task'
+  | 'sub-task-preset'
   | 'activity'
   | 'balance'
   | 'exchange';
@@ -31,6 +32,7 @@ const ALL_APIS: ApiName[] = [
   'template-task',
   'task',
   'sub-task',
+  'sub-task-preset',
   'activity',
   'balance',
   'exchange',
@@ -64,6 +66,7 @@ const PERMISSIONS: Record<string, Partial<Record<ApiName, ActionName[]>>> = {
     'template-task': WRITE,
     task: WRITE,
     'sub-task': WRITE,
+    'sub-task-preset': WRITE,
     activity: WRITE,
   },
   leader: {
@@ -72,6 +75,7 @@ const PERMISSIONS: Record<string, Partial<Record<ApiName, ActionName[]>>> = {
     'template-task': WRITE,
     task: WRITE,
     'sub-task': WRITE,
+    'sub-task-preset': WRITE,
     activity: WRITE,
   },
   colaborator: {

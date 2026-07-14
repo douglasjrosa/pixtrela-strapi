@@ -1,3 +1,4 @@
+import { assertReasonWhenDeactivating } from '../../../../business/deactivation-reason';
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   mapTemplateSubTasksToCreatePayloads,
@@ -43,6 +44,10 @@ export default {
     const documentId = event.params.documentId;
     const data = event.params.data;
     if (!documentId || !data) return;
+    assertReasonWhenDeactivating(
+      data.active === false,
+      data.reasonForDeactivation,
+    );
     await applyTaskStepForStatusChange(documentId, data);
   },
 

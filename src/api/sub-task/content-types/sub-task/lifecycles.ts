@@ -1,3 +1,4 @@
+import { assertReasonWhenDeactivating } from '../../../../business/deactivation-reason';
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   resolveTaskStatusFromSubTasks,
@@ -94,7 +95,23 @@ async function syncSubTasksForTask(taskDocumentId: string): Promise<void> {
  * When a sub-task becomes finished, mark the parent task finished if all
  * sibling sub-tasks are finished too. Keep task totalExpectedTime in sync.
  */
+function assertDisablingReason(data: Record<string, unknown> | undefined): void {
+  if (!data) return;
+  assertReasonWhenDeactivating(
+    data.activationStatus === 'disabled',
+    data.reasonForDisabling,
+  );
+}
+
 export default {
+  async beforeCreate(event: { params: { data?: Record<string, unknown> } }) {
+    assertDisablingReason(event.params.data);
+  },
+
+  async beforeUpdate(event: { params: { data?: Record<string, unknown> } }) {
+    assertDisablingReason(event.params.data);
+  },
+
   async afterCreate(event: { result: { documentId?: string } }) {
     const documentId = event.result?.documentId;
     if (!documentId) return;

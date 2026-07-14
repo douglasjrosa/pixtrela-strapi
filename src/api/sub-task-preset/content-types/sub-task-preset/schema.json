@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "sub_task_presets",
+  "info": {
+    "singularName": "sub-task-preset",
+    "pluralName": "sub-task-presets",
+    "displayName": "SubTaskPreset",
+    "description": "Quick-fill preset for creating subtasks (no relation to SubTask)"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "sharingType": {
+      "type": "enumeration",
+      "enum": ["qty", "duration"],
+      "default": "qty",
+      "required": true
+    },
+    "maxSameTimeWorkers": {
+      "type": "integer",
+      "default": 2,
+      "required": true
+    },
+    "expectedTime": {
+      "type": "integer",
+      "required": true
+    }
+  }
+}
