@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 
 import { migrateQueuedStatusToWaiting } from './business/migrate-task-status';
+import { registerTaskStepAutomation } from './business/task-step-automation';
 
 import { LOCAL_AUTH_PROVIDER } from './business/user-auth';
 import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
@@ -273,7 +274,9 @@ async function backfillUserRoleTypes(strapi: Core.Strapi) {
 }
 
 export default {
-  register() {},
+  register({ strapi }: { strapi: Core.Strapi }) {
+    registerTaskStepAutomation(strapi.documents);
+  },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     for (const roleDef of ROLES) {

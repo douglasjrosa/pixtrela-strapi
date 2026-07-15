@@ -22,6 +22,15 @@ type AutomationSettingRecord = {
   finishedStep?: StepRef;
 } | null;
 
+export type TaskDocumentMiddlewareContext = {
+  uid: string;
+  action: string;
+  params: {
+    documentId?: string;
+    data?: Record<string, unknown>;
+  };
+};
+
 function readStepDocumentId(step: StepRef): string | undefined {
   const documentId = step?.documentId;
   return typeof documentId === 'string' && documentId.length > 0
@@ -97,6 +106,42 @@ export async function applyTaskStepForCreate(
 ): Promise<void> {
   if (!Object.prototype.hasOwnProperty.call(data, 'status')) return;
   await assignStepFromStatus(data);
+}
+
+/**
+ * Document Service middleware handler. Prefer this over DB lifecycles:
+ * Strapi 5 beforeUpdate only receives `where.id`, not `documentId`, so the
+ * previous lifecycle path never applied step automation on REST updates.
+ */
+export async function handleTaskStepAutomationMiddleware(
+  context: TaskDocumentMiddlewareContext,
+  next: () => Promise<unknown> | unknown,
+): Promise<unknown> {
+  if (context.uid !== TASK_UID) {
+    return next();
+  }
+
+  const data = context.params.data;
+  if (!data) {
+    return next();
+  }
+
+  if (context.action === 'create') {
+    await applyTaskStepForCreate(data);
+  } else if (context.action === 'update') {
+    const documentId = context.params.documentId;
+    if (documentId) {
+      await applyTaskStepForStatusChange(documentId, data);
+    }
+  }
+
+  return next();
+}
+
+export function registerTaskStepAutomation(
+  documents: { use: (middleware: typeof handleTaskStepAutomationMiddleware) => void },
+): void {
+  documents.use(handleTaskStepAutomationMiddleware);
 }
 
 async function assignStepFromStatus(data: Record<string, unknown>): Promise<void> {
