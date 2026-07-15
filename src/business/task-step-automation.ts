@@ -31,6 +31,17 @@ export type TaskDocumentMiddlewareContext = {
   };
 };
 
+/**
+ * Registration facade for `strapi.documents`.
+ * Strapi's Middleware `Context` is a wide UID union; requiring our narrow
+ * TaskDocumentMiddlewareContext here makes `strapi.documents` unassignable
+ * (TS2345) and breaks `strapi develop` recompiles → API down → Next 500s.
+ */
+export type TaskStepAutomationDocuments = {
+  // Intentionally loose to match Modules.Documents.Service['use'].
+  use: (middleware: (context: any, next: () => any) => any) => unknown;
+};
+
 function readStepDocumentId(step: StepRef): string | undefined {
   const documentId = step?.documentId;
   return typeof documentId === 'string' && documentId.length > 0
@@ -139,7 +150,7 @@ export async function handleTaskStepAutomationMiddleware(
 }
 
 export function registerTaskStepAutomation(
-  documents: { use: (middleware: typeof handleTaskStepAutomationMiddleware) => void },
+  documents: TaskStepAutomationDocuments,
 ): void {
   documents.use(handleTaskStepAutomationMiddleware);
 }

@@ -16,6 +16,7 @@ import {
   handleTaskStepAutomationMiddleware,
   hasTaskStatusChanged,
   mapAutomationSettingToStatusSteps,
+  registerTaskStepAutomation,
   resolveStepDocumentIdForStatus,
 } from './task-step-automation';
 
@@ -173,5 +174,39 @@ describe('handleTaskStepAutomationMiddleware', () => {
 
     expect(data.step).toBe('old');
     expect(findOne).not.toHaveBeenCalled();
+  });
+
+  it('skips step assignment when status is unchanged on update', async () => {
+    findOne.mockResolvedValue({ status: 'producing' });
+
+    const data: Record<string, unknown> = { status: 'producing' };
+    const next = vi.fn(async () => 'ok');
+
+    await handleTaskStepAutomationMiddleware(
+      {
+        uid: 'api::task.task',
+        action: 'update',
+        params: { documentId: 'task-1', data },
+      },
+      next,
+    );
+
+    expect(data.step).toBeUndefined();
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledOnce();
+  });
+});
+
+describe('registerTaskStepAutomation', () => {
+  it('wires the middleware through documents.use', () => {
+    const use = vi.fn();
+    // Same shape as Strapi Modules.Documents.Service['use'] (broad Context).
+    registerTaskStepAutomation({
+      use: (middleware) => {
+        use(middleware);
+        return { use };
+      },
+    });
+    expect(use).toHaveBeenCalledWith(handleTaskStepAutomationMiddleware);
   });
 });
