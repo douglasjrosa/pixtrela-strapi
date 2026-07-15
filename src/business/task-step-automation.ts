@@ -89,6 +89,17 @@ export async function applyTaskStepForStatusChange(
   if (!task) return;
   if (!hasTaskStatusChanged(String(task.status ?? ''), data.status)) return;
 
+  await assignStepFromStatus(data);
+}
+
+export async function applyTaskStepForCreate(
+  data: Record<string, unknown>,
+): Promise<void> {
+  if (!Object.prototype.hasOwnProperty.call(data, 'status')) return;
+  await assignStepFromStatus(data);
+}
+
+async function assignStepFromStatus(data: Record<string, unknown>): Promise<void> {
   const mapping = await loadTaskStatusStepMapping();
   const stepDocumentId = resolveStepDocumentIdForStatus(
     String(data.status),
