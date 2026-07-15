@@ -47,12 +47,67 @@ describe('areAllSubTasksFinished', () => {
 });
 
 describe('resolveTaskStatusFromSubTasks', () => {
-  it('reopens a finished task when a disabled sub-task is counted again', () => {
+  it('returns waiting when every counted sub-task is waiting', () => {
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'waiting' },
+        { status: 'waiting' },
+      ]),
+    ).toBe('waiting');
+  });
+
+  it('returns waiting when there are no counted sub-tasks', () => {
+    expect(resolveTaskStatusFromSubTasks([])).toBe('waiting');
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'producing', activationStatus: 'disabled' },
+      ]),
+    ).toBe('waiting');
+  });
+
+  it('returns producing when at least one sub-task is producing', () => {
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'finished' },
+        { status: 'producing' },
+        { status: 'waiting' },
+      ]),
+    ).toBe('producing');
+  });
+
+  it('returns finished when every counted sub-task is finished', () => {
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'finished' },
+        { status: 'finished' },
+      ]),
+    ).toBe('finished');
+  });
+
+  it('returns paused for a mix of finished and waiting with none producing', () => {
     expect(
       resolveTaskStatusFromSubTasks([
         { status: 'finished', activationStatus: 'unlocked' },
         { status: 'waiting', activationStatus: 'locked' },
       ]),
-    ).toBe('waiting');
+    ).toBe('paused');
+  });
+
+  it('returns paused when some are paused and none are producing', () => {
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'paused' },
+        { status: 'waiting' },
+      ]),
+    ).toBe('paused');
+  });
+
+  it('ignores disabled sub-tasks when deriving status', () => {
+    expect(
+      resolveTaskStatusFromSubTasks([
+        { status: 'finished', activationStatus: 'unlocked' },
+        { status: 'producing', activationStatus: 'disabled' },
+      ]),
+    ).toBe('finished');
   });
 });

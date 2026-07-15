@@ -21,17 +21,24 @@ export function areAllSubTasksFinished(
   return counted.every((subTask) => subTask.status === FINISHED_STATUS);
 }
 
+/**
+ * Derives parent Task.status from counted SubTask statuses:
+ * - all waiting → waiting
+ * - any producing → producing
+ * - all finished → finished
+ * - otherwise (mix without producing) → paused
+ */
 export function resolveTaskStatusFromSubTasks(
   subTasks: SubTaskForTaskCompletion[],
 ): TaskStatus {
   const counted = filterSubTasksCountedForTask(subTasks);
   if (counted.length === 0) return 'waiting';
-  if (areAllSubTasksFinished(counted)) return FINISHED_STATUS;
+  if (counted.every((subTask) => subTask.status === 'waiting')) {
+    return 'waiting';
+  }
   if (counted.some((subTask) => subTask.status === 'producing')) {
     return 'producing';
   }
-  if (counted.some((subTask) => subTask.status === 'paused')) {
-    return 'paused';
-  }
-  return 'waiting';
+  if (areAllSubTasksFinished(counted)) return FINISHED_STATUS;
+  return 'paused';
 }
