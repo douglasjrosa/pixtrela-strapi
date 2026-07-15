@@ -683,7 +683,8 @@ export interface ApiStepStep extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiSubTaskPresetSubTaskPreset extends Struct.CollectionTypeSchema {
+export interface ApiSubTaskPresetSubTaskPreset
+  extends Struct.CollectionTypeSchema {
   collectionName: 'sub_task_presets';
   info: {
     description: 'Quick-fill preset for creating subtasks (no relation to SubTask)';
