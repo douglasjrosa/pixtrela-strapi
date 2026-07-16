@@ -50,10 +50,8 @@ export function isSubTaskAtWorkerCapacity(
   maxSameTimeWorkers: number,
   activeWorkerCount: number,
 ): boolean {
-  return (
-    maxSameTimeWorkers === DUAL_WORKER_CAPACITY &&
-    activeWorkerCount >= DUAL_WORKER_CAPACITY
-  );
+  const capacity = Math.max(1, maxSameTimeWorkers);
+  return activeWorkerCount >= capacity;
 }
 
 /**

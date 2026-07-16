@@ -347,11 +347,23 @@ export default {
       where: { documentId: subTaskDocumentId },
     });
     if (!subTask) throw new Error('notFound');
-    if (subTask.activationStatus !== UNLOCKED_ACTIVATION_STATUS) {
-      throw new Error('forbidden');
-    }
+
     const status = String(subTask.status ?? '');
     if (status !== 'waiting' && status !== PRODUCING_STATUS) {
+      throw new Error('forbidden');
+    }
+
+    const activation = String(
+      subTask.activationStatus ??
+        (subTask as { activation_status?: string }).activation_status ??
+        'locked',
+    );
+    if (activation === 'disabled') {
+      throw new Error('forbidden');
+    }
+    // Waiting tasks must be unlocked (deps). Producing tasks may still be
+    // joinable when capacity remains even if activation lags as locked.
+    if (activation !== UNLOCKED_ACTIVATION_STATUS && status !== PRODUCING_STATUS) {
       throw new Error('forbidden');
     }
 
@@ -359,7 +371,11 @@ export default {
     if (activeIds.includes(colaboratorUserId)) {
       throw new Error('forbidden');
     }
-    const maxSameTimeWorkers = Number(subTask.maxSameTimeWorkers ?? 1);
+    const maxSameTimeWorkers = Number(
+      subTask.maxSameTimeWorkers ??
+        (subTask as { max_same_time_workers?: number }).max_same_time_workers ??
+        1,
+    );
     if (isSubTaskAtWorkerCapacity(maxSameTimeWorkers, activeIds.length)) {
       throw new Error('forbidden');
     }

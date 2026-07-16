@@ -56,10 +56,11 @@ describe('listActiveColaboratorIdsFromActivities', () => {
 });
 
 describe('isSubTaskAtWorkerCapacity', () => {
-  it('is true only for dual-worker subtasks with two active workers', () => {
+  it('is true when active workers reach maxSameTimeWorkers', () => {
     expect(isSubTaskAtWorkerCapacity(2, 2)).toBe(true);
     expect(isSubTaskAtWorkerCapacity(2, 1)).toBe(false);
-    expect(isSubTaskAtWorkerCapacity(1, 1)).toBe(false);
+    expect(isSubTaskAtWorkerCapacity(1, 1)).toBe(true);
+    expect(isSubTaskAtWorkerCapacity(1, 0)).toBe(false);
   });
 });
 
