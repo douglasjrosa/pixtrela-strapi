@@ -5,6 +5,7 @@ import {
   parseQtyStopBody,
   resolveDurationStop,
   resolveQtyStop,
+  resolveStopStatusWithPeers,
 } from './kiosk-stop';
 
 describe('parseDurationStopBody', () => {
@@ -42,5 +43,31 @@ describe('resolveDurationStop', () => {
   it('returns finished or queued based on reported completion', () => {
     expect(resolveDurationStop(true)).toEqual({ qty: 0, subTaskStatus: 'finished' });
     expect(resolveDurationStop(false)).toEqual({ qty: 0, subTaskStatus: 'waiting' });
+  });
+});
+
+describe('resolveStopStatusWithPeers', () => {
+  it('keeps producing when peers remain active', () => {
+    expect(
+      resolveStopStatusWithPeers(
+        { qty: 0, subTaskStatus: 'finished' },
+        1,
+      ),
+    ).toEqual({ qty: 0, subTaskStatus: 'producing' });
+    expect(
+      resolveStopStatusWithPeers(
+        { qty: 2, subTaskStatus: 'finished' },
+        1,
+      ),
+    ).toEqual({ qty: 2, subTaskStatus: 'producing' });
+  });
+
+  it('keeps the base status when no peers remain', () => {
+    expect(
+      resolveStopStatusWithPeers(
+        { qty: 0, subTaskStatus: 'finished' },
+        0,
+      ),
+    ).toEqual({ qty: 0, subTaskStatus: 'finished' });
   });
 });

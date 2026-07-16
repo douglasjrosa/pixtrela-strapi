@@ -1,6 +1,6 @@
 export type SharingType = 'qty' | 'duration';
 
-export type SubTaskStatus = 'finished' | 'waiting';
+export type SubTaskStatus = 'finished' | 'waiting' | 'producing';
 
 export interface KioskStopBody {
   completed?: boolean;
@@ -53,5 +53,20 @@ export function resolveQtyStop(
   return {
     qty: sessionQty,
     subTaskStatus: totalCompleted >= targetQty ? 'finished' : 'waiting',
+  };
+}
+
+/**
+ * When other colaborators are still active, keep the sub-task producing and
+ * never mark it finished — even if this session reported completion/qty.
+ */
+export function resolveStopStatusWithPeers(
+  base: KioskStopResult,
+  remainingActiveWorkerCount: number,
+): KioskStopResult {
+  if (remainingActiveWorkerCount <= 0) return base;
+  return {
+    qty: base.qty,
+    subTaskStatus: 'producing',
   };
 }

@@ -21,6 +21,7 @@ import {
   parseQtyStopBody,
   resolveDurationStop,
   resolveQtyStop,
+  resolveStopStatusWithPeers,
   type KioskStopBody,
 } from '../../../business/kiosk-stop';
 import {
@@ -40,6 +41,7 @@ import {
   type KioskSubTaskRow,
 } from '../../../business/kiosk-subtasks';
 import {
+  isSubTaskAtWorkerCapacity,
   listActiveColaboratorIdsFromActivities,
   shouldHideSubTaskFromKioskQueue,
 } from '../../../business/subtask-active-workers';
@@ -310,14 +312,18 @@ export default {
             viewerColaboratorId: Number(colaborator.id),
           });
         })
-        .map((row) =>
-          mapSubTaskDbRow(
+        .map((row) => {
+          const activeColaboratorIds = row.id
+            ? activeColaboratorIdsBySubTaskId.get(Number(row.id)) ?? []
+            : [];
+          return mapSubTaskDbRow(
             row,
             row.id ? startedAtBySubTaskId.get(Number(row.id)) ?? null : null,
             row.id ? completedQtyBySubTaskId.get(Number(row.id)) ?? 0 : 0,
             row.id ? finishedAtBySubTaskId.get(Number(row.id)) ?? null : null,
-          ),
-        )
+            activeColaboratorIds.length,
+          );
+        })
         .filter((row) => row.documentId.length > 0),
     );
 
@@ -344,7 +350,19 @@ export default {
     if (subTask.activationStatus !== UNLOCKED_ACTIVATION_STATUS) {
       throw new Error('forbidden');
     }
-    if (subTask.status !== 'waiting') throw new Error('forbidden');
+    const status = String(subTask.status ?? '');
+    if (status !== 'waiting' && status !== PRODUCING_STATUS) {
+      throw new Error('forbidden');
+    }
+
+    const activeIds = await fetchActiveColaboratorIdsForSubTask(Number(subTask.id));
+    if (activeIds.includes(colaboratorUserId)) {
+      throw new Error('forbidden');
+    }
+    const maxSameTimeWorkers = Number(subTask.maxSameTimeWorkers ?? 1);
+    if (isSubTaskAtWorkerCapacity(maxSameTimeWorkers, activeIds.length)) {
+      throw new Error('forbidden');
+    }
 
     await strapi.db.query(ACTIVITY_UID).create({
       data: {
@@ -355,9 +373,10 @@ export default {
       },
     });
 
+    // Always update so sub-task lifecycles re-run capacity / parent status sync.
     await strapi.documents(SUB_TASK_UID).update({
       documentId: subTaskDocumentId,
-      data: { status: 'producing' },
+      data: { status: PRODUCING_STATUS },
     });
   },
 
@@ -366,7 +385,7 @@ export default {
     subTaskDocumentId: string,
     kioskJwtUserId: number,
     body: KioskStopBody = {},
-  ): Promise<void> {
+  ): Promise<{ remainingWorkerNames: string[] }> {
     const knex = strapi.db.connection;
     await assertKioskJwt(knex, kioskJwtUserId);
     const colaboratorUserId = await resolveColaboratorUserId(
@@ -379,6 +398,13 @@ export default {
       where: { documentId: subTaskDocumentId },
     });
     if (!subTask) throw new Error('notFound');
+
+    const activeIdsBefore = await fetchActiveColaboratorIdsForSubTask(
+      Number(subTask.id),
+    );
+    if (!activeIdsBefore.includes(colaboratorUserId)) {
+      throw new Error('forbidden');
+    }
 
     const endedAt = new Date();
     const openActivity = await strapi.db.query(ACTIVITY_UID).findOne({
@@ -403,7 +429,7 @@ export default {
     const sharingType =
       subTask.sharingType === 'qty' ? 'qty' : ('duration' as const);
 
-    const stopResult =
+    const baseStopResult =
       sharingType === 'qty'
         ? resolveQtyStop(
             Number(subTask.qty ?? 1),
@@ -411,6 +437,14 @@ export default {
             parseQtyStopBody(body),
           )
         : resolveDurationStop(parseDurationStopBody(body));
+
+    const remainingActiveIds = activeIdsBefore.filter(
+      (id) => id !== colaboratorUserId,
+    );
+    const stopResult = resolveStopStatusWithPeers(
+      baseStopResult,
+      remainingActiveIds.length,
+    );
 
     await strapi.documents(SUB_TASK_UID).update({
       documentId: subTaskDocumentId,
@@ -429,6 +463,13 @@ export default {
         qty: stopResult.qty,
       },
     });
+
+    const remainingWorkerNames =
+      remainingActiveIds.length > 0
+        ? await fetchUserNamesByIds(remainingActiveIds)
+        : [];
+
+    return { remainingWorkerNames };
   },
 
   async listStaffColaborators(
@@ -617,6 +658,34 @@ async function fetchFinishedAtBySubTaskId(
     );
 
   return buildFinishedAtBySubTaskId(refs);
+}
+
+async function fetchActiveColaboratorIdsForSubTask(
+  subTaskId: number,
+): Promise<number[]> {
+  const map = await fetchActiveColaboratorIdsBySubTaskId([subTaskId]);
+  return map.get(subTaskId) ?? [];
+}
+
+async function fetchUserNamesByIds(userIds: number[]): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const knex = strapi.db.connection;
+  const rows = (await knex(USERS_TABLE)
+    .whereIn('id', userIds)
+    .select('id', 'name', 'username')) as Array<{
+    id?: number;
+    name?: string;
+    username?: string;
+  }>;
+  const byId = new Map(
+    rows.map((row) => [
+      Number(row.id),
+      String(row.name ?? row.username ?? '').trim(),
+    ]),
+  );
+  return userIds
+    .map((id) => byId.get(id) ?? '')
+    .filter((name) => name.length > 0);
 }
 
 async function fetchActiveColaboratorIdsBySubTaskId(

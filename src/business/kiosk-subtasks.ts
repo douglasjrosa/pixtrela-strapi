@@ -22,6 +22,7 @@ export type KioskSubTaskRow = {
   taskName: string;
   taskIndex: number;
   finishedAt: string | null;
+  activeWorkerCount: number;
 };
 
 type UserDocumentRef = {
@@ -82,6 +83,7 @@ export function mapSubTaskDbRow(
   startedAt: string | null = null,
   completedQty = 0,
   finishedAt: string | null = null,
+  activeWorkerCount = 0,
 ): KioskSubTaskRow {
   const sharingType = row.sharingType ?? row.sharing_type;
   return {
@@ -100,6 +102,7 @@ export function mapSubTaskDbRow(
     taskName: String(row.taskName ?? row.task_name ?? ''),
     taskIndex: Number(row.taskIndex ?? row.task_index ?? 0),
     finishedAt,
+    activeWorkerCount: Math.max(0, activeWorkerCount),
   };
 }
 

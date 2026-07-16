@@ -257,10 +257,13 @@ export default {
         qty?: number;
       };
 
-      await strapi
+      const result = await strapi
         .service('api::kiosk.kiosk')
         .stopSubTask(documentId, subTaskDocumentId, jwtUserId, body);
-      ctx.body = { ok: true };
+      ctx.body = {
+        ok: true,
+        remainingWorkerNames: result?.remainingWorkerNames ?? [],
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'error';
       if (message === 'forbidden') return ctx.forbidden();

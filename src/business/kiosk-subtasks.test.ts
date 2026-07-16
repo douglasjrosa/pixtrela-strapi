@@ -42,6 +42,7 @@ describe('mapSubTaskDbRow', () => {
       taskName: '',
       taskIndex: 0,
       finishedAt: null,
+      activeWorkerCount: 0,
     });
   });
 
