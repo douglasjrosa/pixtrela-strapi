@@ -37,7 +37,7 @@
       "type": "integer",
       "default": 0
     },
-    "starsAwarded": {
+    "currencyAwarded": {
       "type": "integer",
       "default": 0
     }

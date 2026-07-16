@@ -6,7 +6,7 @@ import {
   shouldCopyTemplateSubtasks,
   type TemplateSubTaskComponent,
 } from '../../../../business/copy-template-subtasks';
-import { rescaleExpectedTimeForTaskQtyChange } from '../../../../business/stars';
+import { rescaleExpectedTimeForTaskQtyChange } from '../../../../business/work-currency';
 
 const TASK_UID = 'api::task.task';
 const TASK_SERVICE_UID = 'api::task.task';

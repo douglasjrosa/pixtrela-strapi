@@ -1,4 +1,4 @@
-import { resolveSubTaskTargetQty } from './stars';
+import { resolveSubTaskTargetQty } from './work-currency';
 
 const DISABLED_ACTIVATION_STATUS = 'disabled';
 

@@ -1,5 +1,5 @@
 import { assertReasonWhenDeactivating } from '../../../../business/deactivation-reason';
-import { scaleExpectedTimeByTaskQty } from '../../../../business/stars';
+import { scaleExpectedTimeByTaskQty } from '../../../../business/work-currency';
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   resolveTaskStatusFromSubTasks,

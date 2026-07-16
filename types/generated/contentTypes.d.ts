@@ -461,6 +461,7 @@ export interface ApiActivityActivity extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    currencyAwarded: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -469,7 +470,6 @@ export interface ApiActivityActivity extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
     qty: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
-    starsAwarded: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     subTask: Schema.Attribute.Relation<'manyToOne', 'api::sub-task.sub-task'>;
     timestamp: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;

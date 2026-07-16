@@ -275,7 +275,7 @@ export default {
         action: activity.action as 'started' | 'stoped',
         subTaskStatus: String(subTask?.status ?? ''),
         expectedTime: Number(subTask?.expectedTime ?? 0),
-        starsAwarded: Number(activity.starsAwarded ?? 0),
+        currencyAwarded: Number(activity.currencyAwarded ?? 0),
         currencyId: defaultCurrencyId,
       };
     });

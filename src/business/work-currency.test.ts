@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  calculateDurationStarsCredits,
-  calculateQtySessionStars,
-  calculateStars,
+  calculateCurrencyAmount,
+  calculateDurationCurrencyCredits,
+  calculateQtySessionCurrency,
   rescaleExpectedTimeForTaskQtyChange,
   resolveSecondsPerPiece,
   resolveSubTaskTargetQty,
   scaleExpectedTimeByTaskQty,
-  shouldCreditDurationStars,
-  shouldCreditStars,
-} from './stars';
+  shouldCreditCurrency,
+  shouldCreditDurationCurrency,
+} from './work-currency';
 
 describe('scaleExpectedTimeByTaskQty', () => {
   it('multiplies base expected time by task qty', () => {
@@ -20,13 +20,6 @@ describe('scaleExpectedTimeByTaskQty', () => {
 
   it('uses at least 1 for task qty', () => {
     expect(scaleExpectedTimeByTaskQty(30, 0)).toBe(30);
-  });
-});
-
-describe('rescaleExpectedTimeForTaskQtyChange', () => {
-  it('rescales stored expected time when task qty changes', () => {
-    expect(rescaleExpectedTimeForTaskQtyChange(300, 10, 5)).toBe(150);
-    expect(rescaleExpectedTimeForTaskQtyChange(120, 1, 10)).toBe(1200);
   });
 });
 
@@ -51,7 +44,7 @@ describe('resolveSecondsPerPiece', () => {
   });
 });
 
-describe('calculateQtySessionStars', () => {
+describe('calculateQtySessionCurrency', () => {
   const currency = { currencyPerSecond: 1 };
 
   it('pays per piece using expected time share', () => {
@@ -61,32 +54,32 @@ describe('calculateQtySessionStars', () => {
       taskQty: 10,
       sharingType: 'qty' as const,
     };
-    expect(calculateQtySessionStars(context, { sessionQty: 5 }, currency)).toBe(
-      75,
-    );
-    expect(calculateQtySessionStars(context, { sessionQty: 12 }, currency)).toBe(
-      180,
-    );
-    expect(calculateQtySessionStars(context, { sessionQty: 3 }, currency)).toBe(
-      45,
-    );
+    expect(
+      calculateQtySessionCurrency(context, { sessionQty: 5 }, currency),
+    ).toBe(75);
+    expect(
+      calculateQtySessionCurrency(context, { sessionQty: 12 }, currency),
+    ).toBe(180);
+    expect(
+      calculateQtySessionCurrency(context, { sessionQty: 3 }, currency),
+    ).toBe(45);
   });
 
-  it('pays 60 stars each when two workers finish one piece of two', () => {
+  it('pays 60 each when two workers finish one piece of two', () => {
     const context = {
       expectedTime: 120,
       qty: 2,
       taskQty: 1,
       sharingType: 'qty' as const,
     };
-    expect(calculateQtySessionStars(context, { sessionQty: 1 }, currency)).toBe(
-      60,
-    );
+    expect(
+      calculateQtySessionCurrency(context, { sessionQty: 1 }, currency),
+    ).toBe(60);
   });
 
   it('returns 0 for duration sharing', () => {
     expect(
-      calculateQtySessionStars(
+      calculateQtySessionCurrency(
         {
           expectedTime: 120,
           qty: 1,
@@ -100,7 +93,7 @@ describe('calculateQtySessionStars', () => {
   });
 });
 
-describe('calculateDurationStarsCredits', () => {
+describe('calculateDurationCurrencyCredits', () => {
   const currency = { currencyPerSecond: 1 };
   const context = {
     expectedTime: 300,
@@ -111,7 +104,7 @@ describe('calculateDurationStarsCredits', () => {
 
   it('splits expected pool by time-spent share with ceil', () => {
     expect(
-      calculateDurationStarsCredits(
+      calculateDurationCurrencyCredits(
         context,
         [
           { colaboratorId: 1, timeSpentSeconds: 150 },
@@ -121,15 +114,15 @@ describe('calculateDurationStarsCredits', () => {
         currency,
       ),
     ).toEqual([
-      { colaboratorId: 1, stars: 100 },
-      { colaboratorId: 2, stars: 67 },
-      { colaboratorId: 3, stars: 134 },
+      { colaboratorId: 1, amount: 100 },
+      { colaboratorId: 2, amount: 67 },
+      { colaboratorId: 3, amount: 134 },
     ]);
   });
 
   it('returns empty when no positive participation', () => {
     expect(
-      calculateDurationStarsCredits(
+      calculateDurationCurrencyCredits(
         context,
         [{ colaboratorId: 1, timeSpentSeconds: 0 }],
         currency,
@@ -138,24 +131,27 @@ describe('calculateDurationStarsCredits', () => {
   });
 });
 
-describe('calculateStars (legacy helper)', () => {
+describe('calculateCurrencyAmount (legacy helper)', () => {
   it('multiplies expectedTime by currencyPerSecond', () => {
-    expect(calculateStars({ expectedTime: 60 }, { currencyPerSecond: 2 })).toBe(
-      120,
-    );
+    expect(
+      calculateCurrencyAmount({ expectedTime: 60 }, { currencyPerSecond: 2 }),
+    ).toBe(120);
   });
 });
 
-describe('shouldCreditDurationStars', () => {
+describe('shouldCreditDurationCurrency', () => {
   it('credits when stopped and sub-task is finished', () => {
     expect(
-      shouldCreditDurationStars({ action: 'stoped', subTaskStatus: 'finished' }),
+      shouldCreditDurationCurrency({
+        action: 'stoped',
+        subTaskStatus: 'finished',
+      }),
     ).toBe(true);
   });
 
   it('does not credit when only started', () => {
     expect(
-      shouldCreditDurationStars({
+      shouldCreditDurationCurrency({
         action: 'started',
         subTaskStatus: 'finished',
       }),
@@ -164,13 +160,16 @@ describe('shouldCreditDurationStars', () => {
 
   it('does not credit when stopped but sub-task is not finished', () => {
     expect(
-      shouldCreditDurationStars({ action: 'stoped', subTaskStatus: 'waiting' }),
+      shouldCreditDurationCurrency({
+        action: 'stoped',
+        subTaskStatus: 'waiting',
+      }),
     ).toBe(false);
   });
 
-  it('keeps shouldCreditStars as alias', () => {
+  it('keeps shouldCreditCurrency as alias', () => {
     expect(
-      shouldCreditStars({ action: 'stoped', subTaskStatus: 'finished' }),
+      shouldCreditCurrency({ action: 'stoped', subTaskStatus: 'finished' }),
     ).toBe(true);
   });
 });

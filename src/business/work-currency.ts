@@ -1,22 +1,22 @@
 /**
- * Pure Stars (currency) rules for SubTask completion.
+ * Pure work-currency rules for SubTask completion payments.
  * Unit-tested without booting Strapi.
  */
 
-export interface StarsCurrency {
+export interface WorkCurrencyRate {
   currencyPerSecond: number;
 }
 
-export type StarsSharingType = 'qty' | 'duration';
+export type WorkSharingType = 'qty' | 'duration';
 
-export interface StarsSubTaskContext {
+export interface WorkSubTaskContext {
   expectedTime: number;
   qty: number;
   taskQty: number;
-  sharingType: StarsSharingType;
+  sharingType: WorkSharingType;
 }
 
-export interface QtyStarsSession {
+export interface QtyCurrencySession {
   sessionQty: number;
 }
 
@@ -25,9 +25,9 @@ export interface DurationParticipation {
   timeSpentSeconds: number;
 }
 
-export interface StarsCredit {
+export interface CurrencyCredit {
   colaboratorId: number;
-  stars: number;
+  amount: number;
 }
 
 /**
@@ -86,12 +86,12 @@ export function resolveSecondsPerPiece(
 }
 
 /**
- * Stars for one qty stop session (pieces reported on exit).
+ * Currency amount for one qty stop session (pieces reported on exit).
  */
-export function calculateQtySessionStars(
-  context: StarsSubTaskContext,
-  session: QtyStarsSession,
-  currency: StarsCurrency,
+export function calculateQtySessionCurrency(
+  context: WorkSubTaskContext,
+  session: QtyCurrencySession,
+  currency: WorkCurrencyRate,
 ): number {
   const rate = Math.max(0, currency.currencyPerSecond ?? 0);
   const pieces = Math.max(0, Math.floor(Number(session.sessionQty) || 0));
@@ -110,11 +110,11 @@ export function calculateQtySessionStars(
  * Distributes expectedTime × rate across colaborators by time-spent share.
  * Uses Math.ceil per share (may sum slightly above the pool).
  */
-export function calculateDurationStarsCredits(
-  context: StarsSubTaskContext,
+export function calculateDurationCurrencyCredits(
+  context: WorkSubTaskContext,
   participations: DurationParticipation[],
-  currency: StarsCurrency,
-): StarsCredit[] {
+  currency: WorkCurrencyRate,
+): CurrencyCredit[] {
   const rate = Math.max(0, currency.currencyPerSecond ?? 0);
   const poolSeconds = Math.max(0, Number(context.expectedTime) || 0);
   if (context.sharingType !== 'duration' || rate <= 0 || poolSeconds <= 0) {
@@ -134,18 +134,18 @@ export function calculateDurationStarsCredits(
   );
   if (totalSpent <= 0) return [];
 
-  const poolStars = poolSeconds * rate;
+  const poolAmount = poolSeconds * rate;
 
   return cleaned.map((row) => ({
     colaboratorId: row.colaboratorId,
-    stars: Math.ceil((row.timeSpentSeconds / totalSpent) * poolStars),
+    amount: Math.ceil((row.timeSpentSeconds / totalSpent) * poolAmount),
   }));
 }
 
-/** @deprecated Prefer calculateQtySessionStars / calculateDurationStarsCredits. */
-export function calculateStars(
+/** @deprecated Prefer calculateQtySessionCurrency / calculateDurationCurrencyCredits. */
+export function calculateCurrencyAmount(
   subTask: { expectedTime: number },
-  currency: StarsCurrency,
+  currency: WorkCurrencyRate,
 ): number {
   const seconds = Math.max(0, subTask.expectedTime ?? 0);
   const rate = Math.max(0, currency.currencyPerSecond ?? 0);
@@ -161,11 +161,13 @@ export interface CompletingActivity {
  * Duration-mode pool credits when the finishing stop lands.
  * Qty-mode credits on every stop with pieces (handled separately).
  */
-export function shouldCreditDurationStars(activity: CompletingActivity): boolean {
+export function shouldCreditDurationCurrency(
+  activity: CompletingActivity,
+): boolean {
   return activity.action === 'stoped' && activity.subTaskStatus === 'finished';
 }
 
-/** @deprecated Use shouldCreditDurationStars for duration finishes. */
-export function shouldCreditStars(activity: CompletingActivity): boolean {
-  return shouldCreditDurationStars(activity);
+/** @deprecated Use shouldCreditDurationCurrency for duration finishes. */
+export function shouldCreditCurrency(activity: CompletingActivity): boolean {
+  return shouldCreditDurationCurrency(activity);
 }

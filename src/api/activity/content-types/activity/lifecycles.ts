@@ -1,8 +1,9 @@
 import {
-  calculateDurationStarsCredits,
-  calculateQtySessionStars,
-  shouldCreditDurationStars,
-} from '../../../../business/stars';
+  calculateDurationCurrencyCredits,
+  calculateQtySessionCurrency,
+  shouldCreditDurationCurrency,
+} from '../../../../business/work-currency';
+import { selectPaymentCurrency } from '../../../../business/payment-currency';
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   listTimeSpentByColaborator,
@@ -10,12 +11,10 @@ import {
 } from '../../../../business/task-time-spent';
 
 const ACTIVITY_UID = 'api::activity.activity';
-const CURRENCY_UID = 'api::currency.currency';
 const CURRENCY_FOR_SUBTASKS_UID =
   'api::currency-for-subtasks.currency-for-subtasks';
 const BALANCE_UID = 'api::balance.balance';
 const TASK_SERVICE_UID = 'api::task.task';
-const SUB_TASK_UID = 'api::sub-task.sub-task';
 
 async function readTaskDocumentId(activityDocumentId: string): Promise<string | null> {
   const activity = await strapi.documents(ACTIVITY_UID).findOne({
@@ -41,6 +40,10 @@ async function syncParentTaskSubTasks(activityDocumentId: string): Promise<void>
   await runTaskSubTaskSyncRoutine(taskDocumentId);
 }
 
+/**
+ * Payment currency must be configured on Currency for Subtasks.
+ * No silent fallback to an arbitrary Currency row.
+ */
 async function resolvePaymentCurrency(): Promise<{
   id: number;
   currencyPerSecond: number;
@@ -52,33 +55,21 @@ async function resolvePaymentCurrency(): Promise<{
     | { id?: number; currencyPerSecond?: number }
     | null
     | undefined;
-  if (linked?.id) {
-    return {
-      id: linked.id,
-      currencyPerSecond: Number(linked.currencyPerSecond ?? 0),
-    };
-  }
-
-  const [currency] = await strapi.documents(CURRENCY_UID).findMany({ limit: 1 });
-  if (!currency?.id) return null;
-  return {
-    id: currency.id,
-    currencyPerSecond: Number(currency.currencyPerSecond ?? 0),
-  };
+  return selectPaymentCurrency(linked);
 }
 
-async function setActivityStarsAwarded(
+async function setActivityCurrencyAwarded(
   activityDocumentId: string,
-  stars: number,
+  amount: number,
 ): Promise<void> {
-  if (stars <= 0) return;
+  if (amount <= 0) return;
   await strapi.documents(ACTIVITY_UID).update({
     documentId: activityDocumentId,
-    data: { starsAwarded: stars },
+    data: { currencyAwarded: amount },
   });
 }
 
-async function creditQtyStars(input: {
+async function creditQtyCurrency(input: {
   activityDocumentId: string;
   colaboratorId: number;
   expectedTime: number;
@@ -87,7 +78,7 @@ async function creditQtyStars(input: {
   sessionQty: number;
   currency: { id: number; currencyPerSecond: number };
 }): Promise<void> {
-  const stars = calculateQtySessionStars(
+  const amount = calculateQtySessionCurrency(
     {
       expectedTime: input.expectedTime,
       qty: input.subTaskQty,
@@ -97,15 +88,15 @@ async function creditQtyStars(input: {
     { sessionQty: input.sessionQty },
     { currencyPerSecond: input.currency.currencyPerSecond },
   );
-  if (stars <= 0) return;
+  if (amount <= 0) return;
 
   await strapi
     .service(BALANCE_UID)
-    .creditIncome(input.colaboratorId, input.currency.id, stars);
-  await setActivityStarsAwarded(input.activityDocumentId, stars);
+    .creditIncome(input.colaboratorId, input.currency.id, amount);
+  await setActivityCurrencyAwarded(input.activityDocumentId, amount);
 }
 
-async function creditDurationStars(input: {
+async function creditDurationCurrency(input: {
   subTaskId: number;
   expectedTime: number;
   subTaskQty: number;
@@ -137,7 +128,7 @@ async function creditDurationStars(input: {
   }
 
   const participations = listTimeSpentByColaborator(rows, new Date());
-  const credits = calculateDurationStarsCredits(
+  const credits = calculateDurationCurrencyCredits(
     {
       expectedTime: input.expectedTime,
       qty: input.subTaskQty,
@@ -149,22 +140,22 @@ async function creditDurationStars(input: {
   );
 
   for (const credit of credits) {
-    if (credit.stars <= 0) continue;
+    if (credit.amount <= 0) continue;
     await strapi
       .service(BALANCE_UID)
-      .creditIncome(credit.colaboratorId, input.currency.id, credit.stars);
+      .creditIncome(credit.colaboratorId, input.currency.id, credit.amount);
 
     if (credit.colaboratorId === input.finishingColaboratorId) {
-      await setActivityStarsAwarded(
+      await setActivityCurrencyAwarded(
         input.finishingActivityDocumentId,
-        credit.stars,
+        credit.amount,
       );
     }
   }
 }
 
 /**
- * Credit Stars on stop according to sharingType rules.
+ * Credit work currency on stop according to sharingType rules.
  * Keep parent task totalTimeSpent in sync with activities.
  */
 export default {
@@ -210,7 +201,7 @@ export default {
           subTask.sharingType === 'qty' ? 'qty' : 'duration';
 
         if (sharingType === 'qty') {
-          await creditQtyStars({
+          await creditQtyCurrency({
             activityDocumentId: documentId,
             colaboratorId: colaborator.id,
             expectedTime: context.expectedTime,
@@ -220,12 +211,12 @@ export default {
             currency,
           });
         } else if (
-          shouldCreditDurationStars({
+          shouldCreditDurationCurrency({
             action: 'stoped',
             subTaskStatus: String(subTask.status ?? ''),
           })
         ) {
-          await creditDurationStars({
+          await creditDurationCurrency({
             subTaskId: subTask.id,
             expectedTime: context.expectedTime,
             subTaskQty: context.subTaskQty,

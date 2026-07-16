@@ -24,7 +24,7 @@ import {
   resolveStopStatusWithPeers,
   type KioskStopBody,
 } from '../../../business/kiosk-stop';
-import { resolveSubTaskTargetQty } from '../../../business/stars';
+import { resolveSubTaskTargetQty } from '../../../business/work-currency';
 import {
   filterKioskDailyQueue,
   sortKioskDailyQueue,

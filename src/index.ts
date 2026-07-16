@@ -12,6 +12,7 @@ const TASK_AUTOMATION_SETTING_UID =
   'api::task-automation-setting.task-automation-setting';
 const CURRENCY_FOR_SUBTASKS_UID =
   'api::currency-for-subtasks.currency-for-subtasks';
+const CURRENCY_UID = 'api::currency.currency';
 
 type ActionName = 'find' | 'findOne' | 'create' | 'update' | 'delete';
 type ApiName =
@@ -247,9 +248,28 @@ async function ensureTaskAutomationSettingPermissions(strapi: Core.Strapi) {
 }
 
 async function ensureCurrencyForSubtasksRecord(strapi: Core.Strapi) {
-  const existing = await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).findFirst();
-  if (existing) return;
-  await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).create({ data: {} });
+  const existing = await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).findFirst({
+    populate: { currency: { fields: ['documentId'] } },
+  });
+  const linked = existing?.currency as { documentId?: string } | null | undefined;
+  if (existing && linked?.documentId) return;
+
+  const [currency] = await strapi.documents(CURRENCY_UID).findMany({ limit: 1 });
+  const currencyDocumentId = currency?.documentId as string | undefined;
+
+  if (existing) {
+    if (currencyDocumentId) {
+      await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).update({
+        documentId: existing.documentId,
+        data: { currency: currencyDocumentId },
+      });
+    }
+    return;
+  }
+
+  await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).create({
+    data: currencyDocumentId ? { currency: currencyDocumentId } : {},
+  });
 }
 
 async function ensureCurrencyForSubtasksPermissions(strapi: Core.Strapi) {

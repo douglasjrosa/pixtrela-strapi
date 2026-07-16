@@ -1,4 +1,4 @@
-import { calculateStars, shouldCreditStars } from './stars';
+import { calculateCurrencyAmount, shouldCreditCurrency } from './work-currency';
 import { firstDayOfMonth } from './balance';
 
 export interface RankingUser {
@@ -39,7 +39,7 @@ export interface ActivityIncomeRow {
   action: 'started' | 'stoped';
   subTaskStatus: string;
   expectedTime: number;
-  starsAwarded: number;
+  currencyAwarded: number;
   currencyId: number;
 }
 
@@ -192,22 +192,22 @@ export function aggregateDailyIncomeFromActivities(
       const dayKey = toUtcDateKey(activity.timestamp);
       if (!dayKey.startsWith(monthPrefix)) continue;
 
-      let stars = Math.max(0, Number(activity.starsAwarded) || 0);
+      let amount = Math.max(0, Number(activity.currencyAwarded) || 0);
       if (
-        stars <= 0 &&
-        shouldCreditStars({
+        amount <= 0 &&
+        shouldCreditCurrency({
           action: activity.action,
           subTaskStatus: activity.subTaskStatus,
         })
       ) {
-        stars = calculateStars(
+        amount = calculateCurrencyAmount(
           { expectedTime: activity.expectedTime },
           { currencyPerSecond: rate.currencyPerSecond },
         );
       }
-      if (stars <= 0) continue;
+      if (amount <= 0) continue;
 
-      amounts.set(dayKey, (amounts.get(dayKey) ?? 0) + stars);
+      amounts.set(dayKey, (amounts.get(dayKey) ?? 0) + amount);
     }
 
     return {
