@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildFinishedAtBySubTaskId,
+  buildOpenStartedAtBySubTaskId,
   buildStartedAtBySubTaskId,
   filterKioskVisibleSubTasks,
   isVisibleOnKiosk,
@@ -86,6 +87,41 @@ describe('buildStartedAtBySubTaskId', () => {
     ]);
     expect(map.get(1)).toBe('2026-06-05T10:00:00.000Z');
     expect(map.get(2)).toBe('2026-06-05T11:00:00.000Z');
+  });
+});
+
+describe('buildOpenStartedAtBySubTaskId', () => {
+  it('keeps only sessions whose latest action is started', () => {
+    const map = buildOpenStartedAtBySubTaskId([
+      {
+        subTaskId: 1,
+        action: 'started',
+        timestamp: '2026-06-05T10:00:00.000Z',
+      },
+      {
+        subTaskId: 1,
+        action: 'stoped',
+        timestamp: '2026-06-05T10:30:00.000Z',
+      },
+      {
+        subTaskId: 2,
+        action: 'started',
+        timestamp: '2026-06-05T11:00:00.000Z',
+      },
+      {
+        subTaskId: 2,
+        action: 'stoped',
+        timestamp: '2026-06-05T11:10:00.000Z',
+      },
+      {
+        subTaskId: 2,
+        action: 'started',
+        timestamp: '2026-06-05T11:20:00.000Z',
+      },
+    ]);
+
+    expect(map.has(1)).toBe(false);
+    expect(map.get(2)).toBe('2026-06-05T11:20:00.000Z');
   });
 });
 

@@ -30,7 +30,7 @@ import {
 } from '../../../business/kiosk-daily-queue';
 import {
   buildFinishedAtBySubTaskId,
-  buildStartedAtBySubTaskId,
+  buildOpenStartedAtBySubTaskId,
   filterKioskVisibleSubTasks,
   mapSubTaskDbRow,
   SUB_TASK_ASSIGNED_LINK_TABLE,
@@ -755,7 +755,7 @@ async function fetchOpenStartedAtBySubTaskId(
   const activities = await strapi.db.query(ACTIVITY_UID).findMany({
     where: {
       colaborator: colaboratorUserId,
-      action: 'started',
+      action: { $in: ['started', 'stoped'] },
       subTask: { id: { $in: subTaskIds } },
     },
     orderBy: { timestamp: 'asc' },
@@ -767,11 +767,26 @@ async function fetchOpenStartedAtBySubTaskId(
       const subTask = activity.subTask as { id?: number } | null;
       const timestamp = activity.timestamp;
       if (!subTask?.id || !timestamp) return null;
+      if (activity.action !== 'started' && activity.action !== 'stoped') {
+        return null;
+      }
       const iso =
         timestamp instanceof Date ? timestamp.toISOString() : String(timestamp);
-      return { subTaskId: subTask.id, timestamp: iso };
+      return {
+        subTaskId: subTask.id,
+        action: activity.action as 'started' | 'stoped',
+        timestamp: iso,
+      };
     })
-    .filter((ref): ref is { subTaskId: number; timestamp: string } => ref !== null);
+    .filter(
+      (
+        ref,
+      ): ref is {
+        subTaskId: number;
+        action: 'started' | 'stoped';
+        timestamp: string;
+      } => ref !== null,
+    );
 
-  return buildStartedAtBySubTaskId(refs);
+  return buildOpenStartedAtBySubTaskId(refs);
 }

@@ -58,6 +58,12 @@ type OpenActivityRef = {
   timestamp: string;
 };
 
+export type SessionActivityRef = {
+  subTaskId: number;
+  action: 'started' | 'stoped';
+  timestamp: string;
+};
+
 export function readUserDocumentId(
   user: UserDocumentRef | null | undefined,
 ): string | null {
@@ -122,6 +128,29 @@ export function buildStartedAtBySubTaskId(
     }
   }
   return map;
+}
+
+/**
+ * Resolves the open session start timestamp per sub-task for one colaborator.
+ * A session is open only when the latest action is "started".
+ */
+export function buildOpenStartedAtBySubTaskId(
+  activities: SessionActivityRef[],
+): Map<number, string> {
+  const sorted = [...activities].sort((left, right) =>
+    left.timestamp.localeCompare(right.timestamp),
+  );
+  const openStartBySubTask = new Map<number, string>();
+
+  for (const activity of sorted) {
+    if (activity.action === 'started') {
+      openStartBySubTask.set(activity.subTaskId, activity.timestamp);
+      continue;
+    }
+    openStartBySubTask.delete(activity.subTaskId);
+  }
+
+  return openStartBySubTask;
 }
 
 export function buildFinishedAtBySubTaskId(
