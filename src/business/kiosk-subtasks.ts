@@ -1,3 +1,5 @@
+import { resolveSubTaskTargetQty } from './stars';
+
 const DISABLED_ACTIVATION_STATUS = 'disabled';
 
 export const SUB_TASKS_TABLE = 'sub_tasks';
@@ -13,6 +15,8 @@ export type KioskSubTaskRow = {
   status: string;
   activationStatus: 'locked' | 'unlocked' | 'disabled';
   qty: number;
+  /** Pieces required for the whole task (subTask.qty * task.qty). */
+  targetQty: number;
   completedQty: number;
   sharingType: 'qty' | 'duration';
   timeSpent: number;
@@ -51,6 +55,8 @@ type SubTaskDbRow = {
   taskName?: string;
   task_index?: number;
   taskIndex?: number;
+  task_qty?: number;
+  taskQty?: number;
 };
 
 type OpenActivityRef = {
@@ -92,13 +98,16 @@ export function mapSubTaskDbRow(
   activeWorkerCount = 0,
 ): KioskSubTaskRow {
   const sharingType = row.sharingType ?? row.sharing_type;
+  const qty = Number(row.qty ?? 1);
+  const taskQty = Number(row.taskQty ?? row.task_qty ?? 1);
   return {
     documentId: String(row.documentId ?? row.document_id ?? ''),
     name: String(row.name ?? ''),
     index: Number(row.index ?? 0),
     status: String(row.status ?? 'waiting'),
     activationStatus: readActivationStatus(row),
-    qty: Number(row.qty ?? 1),
+    qty,
+    targetQty: resolveSubTaskTargetQty(qty, taskQty),
     completedQty: Math.max(0, completedQty),
     sharingType: sharingType === 'qty' ? 'qty' : 'duration',
     timeSpent: Number(row.timeSpent ?? row.time_spent ?? 0),

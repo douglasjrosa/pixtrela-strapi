@@ -14,16 +14,15 @@ export function collectSubTaskExpectedTimes(
 }
 
 /**
- * Task total expected time = sum(counted sub-task expectedTime) * task qty.
+ * Task total expected time = sum of counted sub-task expectedTime values.
+ * Each sub-task.expectedTime is already scaled by task.qty at create time.
  * Disabled sub-tasks are excluded, same as if they were deleted.
  */
 export function calculateTotalExpectedTime(
   subTaskExpectedTimes: number[],
-  taskQty: number,
-): number {  const safeQty = Math.max(1, taskQty);
-  const sum = subTaskExpectedTimes.reduce(
+): number {
+  return subTaskExpectedTimes.reduce(
     (total, seconds) => total + Math.max(0, Number(seconds) || 0),
     0,
   );
-  return sum * safeQty;
 }

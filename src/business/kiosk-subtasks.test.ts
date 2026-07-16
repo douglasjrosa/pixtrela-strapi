@@ -35,6 +35,7 @@ describe('mapSubTaskDbRow', () => {
       activationStatus: 'locked',
       qty: 1,
       completedQty: 0,
+      targetQty: 1,
       sharingType: 'duration',
       timeSpent: 0,
       startedAt: null,

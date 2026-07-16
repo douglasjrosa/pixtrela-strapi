@@ -18,15 +18,12 @@ describe('collectSubTaskExpectedTimes', () => {
 });
 
 describe('calculateTotalExpectedTime', () => {
-  it('sums sub-task expected times and multiplies by task qty', () => {
-    expect(calculateTotalExpectedTime([60, 120], 2)).toBe(360);
+  it('sums sub-task expected times without multiplying by task qty', () => {
+    expect(calculateTotalExpectedTime([60, 120])).toBe(180);
+    expect(calculateTotalExpectedTime([300, 150])).toBe(450);
   });
 
   it('returns zero when there are no sub-tasks', () => {
-    expect(calculateTotalExpectedTime([], 5)).toBe(0);
-  });
-
-  it('uses at least 1 for task qty', () => {
-    expect(calculateTotalExpectedTime([30], 0)).toBe(30);
+    expect(calculateTotalExpectedTime([])).toBe(0);
   });
 });

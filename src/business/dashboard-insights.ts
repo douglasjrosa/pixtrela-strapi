@@ -39,6 +39,7 @@ export interface ActivityIncomeRow {
   action: 'started' | 'stoped';
   subTaskStatus: string;
   expectedTime: number;
+  starsAwarded: number;
   currencyId: number;
 }
 
@@ -187,22 +188,25 @@ export function aggregateDailyIncomeFromActivities(
 
     for (const activity of activities) {
       if (activity.currencyId !== currency.id) continue;
-      if (
-        !shouldCreditStars({
-          action: activity.action,
-          subTaskStatus: activity.subTaskStatus,
-        })
-      ) {
-        continue;
-      }
 
       const dayKey = toUtcDateKey(activity.timestamp);
       if (!dayKey.startsWith(monthPrefix)) continue;
 
-      const stars = calculateStars(
-        { expectedTime: activity.expectedTime },
-        { currencyPerSecond: rate.currencyPerSecond },
-      );
+      let stars = Math.max(0, Number(activity.starsAwarded) || 0);
+      if (
+        stars <= 0 &&
+        shouldCreditStars({
+          action: activity.action,
+          subTaskStatus: activity.subTaskStatus,
+        })
+      ) {
+        stars = calculateStars(
+          { expectedTime: activity.expectedTime },
+          { currencyPerSecond: rate.currencyPerSecond },
+        );
+      }
+      if (stars <= 0) continue;
+
       amounts.set(dayKey, (amounts.get(dayKey) ?? 0) + stars);
     }
 

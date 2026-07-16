@@ -1,0 +1,20 @@
+{
+  "kind": "singleType",
+  "collectionName": "currency_for_subtasks",
+  "info": {
+    "singularName": "currency-for-subtasks",
+    "pluralName": "currencies-for-subtasks",
+    "displayName": "Currency for Subtasks",
+    "description": "Official currency used to pay for subtask work seconds"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "currency": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::currency.currency"
+    }
+  }
+}

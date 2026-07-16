@@ -469,6 +469,7 @@ export interface ApiActivityActivity extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
     qty: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    starsAwarded: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     subTask: Schema.Attribute.Relation<'manyToOne', 'api::sub-task.sub-task'>;
     timestamp: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
@@ -543,6 +544,36 @@ export interface ApiBalanceBalance extends Struct.CollectionTypeSchema {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
+  };
+}
+
+export interface ApiCurrencyForSubtasksCurrencyForSubtasks
+  extends Struct.SingleTypeSchema {
+  collectionName: 'currency_for_subtasks';
+  info: {
+    description: 'Official currency used to pay for subtask work seconds';
+    displayName: 'Currency for Subtasks';
+    pluralName: 'currencies-for-subtasks';
+    singularName: 'currency-for-subtasks';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    currency: Schema.Attribute.Relation<'manyToOne', 'api::currency.currency'>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::currency-for-subtasks.currency-for-subtasks'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
   };
 }
 
@@ -1444,6 +1475,7 @@ declare module '@strapi/strapi' {
       'api::activity.activity': ApiActivityActivity;
       'api::award.award': ApiAwardAward;
       'api::balance.balance': ApiBalanceBalance;
+      'api::currency-for-subtasks.currency-for-subtasks': ApiCurrencyForSubtasksCurrencyForSubtasks;
       'api::currency.currency': ApiCurrencyCurrency;
       'api::exchange.exchange': ApiExchangeExchange;
       'api::kiosk-setting.kiosk-setting': ApiKioskSettingKioskSetting;

@@ -104,7 +104,6 @@ export default factories.createCoreService(TASK_UID, ({ strapi }) => {
 
       const totalExpectedTime = calculateTotalExpectedTime(
         collectSubTaskExpectedTimes(subTasks),
-        Number(task.qty ?? 1),
       );
 
       // afterUpdate guards against computed-only updates, preventing the

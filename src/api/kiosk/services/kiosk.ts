@@ -24,6 +24,7 @@ import {
   resolveStopStatusWithPeers,
   type KioskStopBody,
 } from '../../../business/kiosk-stop';
+import { resolveSubTaskTargetQty } from '../../../business/stars';
 import {
   filterKioskDailyQueue,
   sortKioskDailyQueue,
@@ -213,6 +214,7 @@ type AssignedSubTaskDbRow = {
   task_document_id?: string;
   task_name?: string;
   task_index?: number;
+  task_qty?: number;
 };
 
 const PRODUCING_STATUS = 'producing';
@@ -274,6 +276,7 @@ export default {
         'tasks.document_id as task_document_id',
         'tasks.name as task_name',
         'tasks.index as task_index',
+        'tasks.qty as task_qty',
       )) as AssignedSubTaskDbRow[];
 
     const subTaskIds = rows
@@ -412,6 +415,7 @@ export default {
 
     const subTask = await strapi.db.query(SUB_TASK_UID).findOne({
       where: { documentId: subTaskDocumentId },
+      populate: { task: { select: ['id', 'qty'] } },
     });
     if (!subTask) throw new Error('notFound');
 
@@ -444,11 +448,14 @@ export default {
 
     const sharingType =
       subTask.sharingType === 'qty' ? 'qty' : ('duration' as const);
+    const taskQty = Number(
+      (subTask.task as { qty?: number } | null)?.qty ?? 1,
+    );
 
     const baseStopResult =
       sharingType === 'qty'
         ? resolveQtyStop(
-            Number(subTask.qty ?? 1),
+            resolveSubTaskTargetQty(Number(subTask.qty ?? 1), taskQty),
             await sumStoppedQty(subTask.id),
             parseQtyStopBody(body),
           )

@@ -1,3 +1,5 @@
+import { factories } from '@strapi/strapi';
+
 const DEFAULT_QTY = 1;
 const DEFAULT_MAX_WORKERS = 1;
 const DEFAULT_INDEX = 0;

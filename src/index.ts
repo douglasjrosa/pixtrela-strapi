@@ -10,6 +10,8 @@ import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idl
 const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
 const TASK_AUTOMATION_SETTING_UID =
   'api::task-automation-setting.task-automation-setting';
+const CURRENCY_FOR_SUBTASKS_UID =
+  'api::currency-for-subtasks.currency-for-subtasks';
 
 type ActionName = 'find' | 'findOne' | 'create' | 'update' | 'delete';
 type ApiName =
@@ -244,6 +246,31 @@ async function ensureTaskAutomationSettingPermissions(strapi: Core.Strapi) {
   );
 }
 
+async function ensureCurrencyForSubtasksRecord(strapi: Core.Strapi) {
+  const existing = await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).findFirst();
+  if (existing) return;
+  await strapi.documents(CURRENCY_FOR_SUBTASKS_UID).create({ data: {} });
+}
+
+async function ensureCurrencyForSubtasksPermissions(strapi: Core.Strapi) {
+  const adminRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'admin' } });
+
+  if (!adminRole) return;
+
+  await ensurePermission(
+    strapi,
+    adminRole.id,
+    'api::currency-for-subtasks.currency-for-subtasks.find',
+  );
+  await ensurePermission(
+    strapi,
+    adminRole.id,
+    'api::currency-for-subtasks.currency-for-subtasks.update',
+  );
+}
+
 async function ensureDashboardPermissions(strapi: Core.Strapi, roleType: string, roleId: number) {
   if (roleType === 'kiosk') return;
 
@@ -299,6 +326,8 @@ export default {
     await ensureKioskSettingPermissions(strapi);
     await ensureTaskAutomationSettingRecord(strapi);
     await ensureTaskAutomationSettingPermissions(strapi);
+    await ensureCurrencyForSubtasksRecord(strapi);
+    await ensureCurrencyForSubtasksPermissions(strapi);
     await backfillUserRoleTypes(strapi);
     await migrateQueuedStatusToWaiting(strapi.db.connection);
     strapi.log.info('[pixtrela] roles and permissions ensured');

@@ -6,6 +6,7 @@ import {
   shouldCopyTemplateSubtasks,
   type TemplateSubTaskComponent,
 } from '../../../../business/copy-template-subtasks';
+import { rescaleExpectedTimeForTaskQtyChange } from '../../../../business/stars';
 
 const TASK_UID = 'api::task.task';
 const TASK_SERVICE_UID = 'api::task.task';
@@ -32,13 +33,46 @@ function isComputedOnlyUpdate(data: Record<string, unknown> | undefined): boolea
   return keys.every((key) => COMPUTED_FIELDS.has(key));
 }
 
+async function rescaleSubTasksForTaskQtyChange(
+  taskDocumentId: string,
+  previousTaskQty: number,
+  nextTaskQty: number,
+): Promise<void> {
+  const previousQty = Math.max(1, previousTaskQty);
+  const nextQty = Math.max(1, nextTaskQty);
+  if (previousQty === nextQty) return;
+
+  const subTasks = await strapi.documents(SUB_TASK_UID).findMany({
+    filters: { task: { documentId: taskDocumentId } },
+    fields: ['documentId', 'expectedTime'],
+  });
+
+  for (const subTask of subTasks) {
+    if (!subTask.documentId) continue;
+    const nextExpected = rescaleExpectedTimeForTaskQtyChange(
+      Number(subTask.expectedTime ?? 0),
+      previousQty,
+      nextQty,
+    );
+    await strapi.db.query(SUB_TASK_UID).update({
+      where: { documentId: subTask.documentId },
+      data: { expectedTime: nextExpected },
+    });
+  }
+}
+
 /**
  * When a task is created with templateTaskCode, copy template subTask components
  * into SubTask records linked to the new task.
  */
 export default {
   async beforeUpdate(event: {
-    params: { data?: Record<string, unknown> };
+    params: {
+      data?: Record<string, unknown>;
+      documentId?: string;
+      where?: { documentId?: string };
+    };
+    state: { previousTaskQty?: number };
   }) {
     const data = event.params.data;
     if (!data) return;
@@ -46,6 +80,18 @@ export default {
       data.active === false,
       data.reasonForDeactivation,
     );
+
+    if (!Object.prototype.hasOwnProperty.call(data, 'qty')) return;
+
+    const documentId =
+      event.params.documentId ?? event.params.where?.documentId;
+    if (!documentId) return;
+
+    const current = await strapi.documents(TASK_UID).findOne({
+      documentId,
+      fields: ['qty'],
+    });
+    event.state.previousTaskQty = Math.max(1, Number(current?.qty ?? 1));
   },
 
   async afterCreate(event: { result: { documentId?: string } }) {
@@ -54,7 +100,7 @@ export default {
 
     const task = await strapi.documents(TASK_UID).findOne({
       documentId: taskDocumentId,
-      fields: ['templateTaskCode'],
+      fields: ['templateTaskCode', 'qty'],
     });
     if (!task) return;
 
@@ -109,12 +155,27 @@ export default {
   },
 
   async afterUpdate(event: {
-    result: { documentId?: string };
+    result: { documentId?: string; qty?: number };
     params?: { data?: Record<string, unknown> };
+    state?: { previousTaskQty?: number };
   }) {
     if (isComputedOnlyUpdate(event.params?.data)) return;
     const taskDocumentId = event.result?.documentId;
     if (!taskDocumentId) return;
+
+    const data = event.params?.data;
+    if (
+      data &&
+      Object.prototype.hasOwnProperty.call(data, 'qty') &&
+      typeof event.state?.previousTaskQty === 'number'
+    ) {
+      await rescaleSubTasksForTaskQtyChange(
+        taskDocumentId,
+        event.state.previousTaskQty,
+        Number(event.result?.qty ?? data.qty ?? 1),
+      );
+    }
+
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);
     await runTaskSubTaskSyncRoutine(taskDocumentId);
   },

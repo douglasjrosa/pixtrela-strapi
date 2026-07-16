@@ -65,6 +65,7 @@ describe('aggregateDailyIncomeFromActivities', () => {
           action: 'stoped',
           subTaskStatus: 'finished',
           expectedTime: 10,
+          starsAwarded: 0,
           currencyId: 1,
         },
         {
@@ -72,6 +73,7 @@ describe('aggregateDailyIncomeFromActivities', () => {
           action: 'stoped',
           subTaskStatus: 'finished',
           expectedTime: 5,
+          starsAwarded: 0,
           currencyId: 1,
         },
         {
@@ -79,6 +81,7 @@ describe('aggregateDailyIncomeFromActivities', () => {
           action: 'started',
           subTaskStatus: 'finished',
           expectedTime: 100,
+          starsAwarded: 0,
           currencyId: 1,
         },
       ],
