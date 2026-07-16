@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   countActiveWorkersFromActivities,
   isSubTaskAtWorkerCapacity,
+  listActiveColaboratorIdsFromActivities,
+  shouldHideSubTaskFromKioskQueue,
 } from './subtask-active-workers';
 import type { ActivityTimeRow } from './task-time-spent';
 
@@ -40,10 +42,55 @@ describe('countActiveWorkersFromActivities', () => {
   });
 });
 
+describe('listActiveColaboratorIdsFromActivities', () => {
+  it('returns only colaborators with an open started session', () => {
+    expect(
+      listActiveColaboratorIdsFromActivities([
+        activity(1, 'started', '2026-06-05T10:00:00.000Z'),
+        activity(2, 'started', '2026-06-05T10:01:00.000Z'),
+        activity(3, 'started', '2026-06-05T10:02:00.000Z'),
+        activity(3, 'stoped', '2026-06-05T10:10:00.000Z'),
+      ]).sort(),
+    ).toEqual([1, 2]);
+  });
+});
+
 describe('isSubTaskAtWorkerCapacity', () => {
   it('is true only for dual-worker subtasks with two active workers', () => {
     expect(isSubTaskAtWorkerCapacity(2, 2)).toBe(true);
     expect(isSubTaskAtWorkerCapacity(2, 1)).toBe(false);
     expect(isSubTaskAtWorkerCapacity(1, 1)).toBe(false);
+  });
+});
+
+describe('shouldHideSubTaskFromKioskQueue', () => {
+  it('hides dual-worker subtasks at capacity from non-active viewers', () => {
+    expect(
+      shouldHideSubTaskFromKioskQueue({
+        maxSameTimeWorkers: 2,
+        activeColaboratorIds: [10, 20],
+        viewerColaboratorId: 30,
+      }),
+    ).toBe(true);
+  });
+
+  it('keeps dual-worker subtasks visible to active workers at capacity', () => {
+    expect(
+      shouldHideSubTaskFromKioskQueue({
+        maxSameTimeWorkers: 2,
+        activeColaboratorIds: [10, 20],
+        viewerColaboratorId: 20,
+      }),
+    ).toBe(false);
+  });
+
+  it('does not hide when capacity is not full', () => {
+    expect(
+      shouldHideSubTaskFromKioskQueue({
+        maxSameTimeWorkers: 2,
+        activeColaboratorIds: [10],
+        viewerColaboratorId: 30,
+      }),
+    ).toBe(false);
   });
 });

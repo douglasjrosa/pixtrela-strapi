@@ -39,6 +39,11 @@ import {
   USERS_TABLE,
   type KioskSubTaskRow,
 } from '../../../business/kiosk-subtasks';
+import {
+  listActiveColaboratorIdsFromActivities,
+  shouldHideSubTaskFromKioskQueue,
+} from '../../../business/subtask-active-workers';
+import type { ActivityTimeRow } from '../../../business/task-time-spent';
 
 const ACTIVITY_UID = 'api::activity.activity';
 const SUB_TASK_UID = 'api::sub-task.sub-task';
@@ -201,6 +206,8 @@ type AssignedSubTaskDbRow = {
   expected_time?: number;
   activation_status?: string;
   activationStatus?: string;
+  max_same_time_workers?: number;
+  maxSameTimeWorkers?: number;
   task_document_id?: string;
   task_name?: string;
   task_index?: number;
@@ -261,6 +268,7 @@ export default {
         'sub_tasks.time_spent',
         'sub_tasks.expected_time',
         'sub_tasks.activation_status',
+        'sub_tasks.max_same_time_workers',
         'tasks.document_id as task_document_id',
         'tasks.name as task_name',
         'tasks.index as task_index',
@@ -278,15 +286,30 @@ export default {
       startedAtBySubTaskId,
       completedQtyBySubTaskId,
       finishedAtBySubTaskId,
+      activeColaboratorIdsBySubTaskId,
     ] = await Promise.all([
       fetchOpenStartedAtBySubTaskId(colaborator.id, producingIds),
       fetchCompletedQtyBySubTaskId(subTaskIds),
       fetchFinishedAtBySubTaskId(subTaskIds),
+      fetchActiveColaboratorIdsBySubTaskId(subTaskIds),
     ]);
 
     const now = new Date();
     const mapped = filterKioskVisibleSubTasks(
       rows
+        .filter((row) => {
+          if (!row.id) return true;
+          const maxSameTimeWorkers = Number(
+            row.maxSameTimeWorkers ?? row.max_same_time_workers ?? 1,
+          );
+          const activeColaboratorIds =
+            activeColaboratorIdsBySubTaskId.get(Number(row.id)) ?? [];
+          return !shouldHideSubTaskFromKioskQueue({
+            maxSameTimeWorkers,
+            activeColaboratorIds,
+            viewerColaboratorId: Number(colaborator.id),
+          });
+        })
         .map((row) =>
           mapSubTaskDbRow(
             row,
@@ -594,6 +617,48 @@ async function fetchFinishedAtBySubTaskId(
     );
 
   return buildFinishedAtBySubTaskId(refs);
+}
+
+async function fetchActiveColaboratorIdsBySubTaskId(
+  subTaskIds: number[],
+): Promise<Map<number, number[]>> {
+  if (subTaskIds.length === 0) return new Map();
+
+  const activities = await strapi.db.query(ACTIVITY_UID).findMany({
+    where: {
+      subTask: { id: { $in: subTaskIds } },
+      action: { $in: ['started', 'stoped'] },
+    },
+    orderBy: { timestamp: 'asc' },
+    populate: {
+      colaborator: { select: ['id'] },
+      subTask: { select: ['id'] },
+    },
+  });
+
+  const bySubTask = new Map<number, ActivityTimeRow[]>();
+
+  for (const activity of activities) {
+    const subTask = activity.subTask as { id?: number } | null;
+    const colaborator = activity.colaborator as { id?: number } | null;
+    const timestamp = activity.timestamp;
+    if (!subTask?.id || !colaborator?.id || !timestamp) continue;
+    if (activity.action !== 'started' && activity.action !== 'stoped') continue;
+
+    const rows = bySubTask.get(subTask.id) ?? [];
+    rows.push({
+      action: activity.action,
+      timestamp: timestamp instanceof Date ? timestamp : new Date(timestamp),
+      colaboratorId: colaborator.id,
+    });
+    bySubTask.set(subTask.id, rows);
+  }
+
+  const result = new Map<number, number[]>();
+  for (const [subTaskId, rows] of bySubTask.entries()) {
+    result.set(subTaskId, listActiveColaboratorIdsFromActivities(rows));
+  }
+  return result;
 }
 
 async function fetchOpenStartedAtBySubTaskId(
