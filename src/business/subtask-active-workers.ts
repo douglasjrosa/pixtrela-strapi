@@ -1,7 +1,5 @@
 import type { ActivityTimeRow } from './task-time-spent';
 
-export const DUAL_WORKER_CAPACITY = 2;
-
 function isColaboratorActiveFromSortedActivities(
   rows: ActivityTimeRow[],
 ): boolean {
