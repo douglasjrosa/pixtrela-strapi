@@ -6,6 +6,8 @@ import {
   resolveDurationStop,
   resolveQtyStop,
   resolveStopStatusWithPeers,
+  canAuthorizeKioskStop,
+  shouldKeepSubTaskOnKioskQueue,
 } from './kiosk-stop';
 
 describe('parseDurationStopBody', () => {
@@ -69,5 +71,38 @@ describe('resolveStopStatusWithPeers', () => {
         0,
       ),
     ).toEqual({ qty: 0, subTaskStatus: 'finished' });
+  });
+});
+
+describe('canAuthorizeKioskStop', () => {
+  it('allows stop when the colaborator still has an open started session', () => {
+    expect(canAuthorizeKioskStop(true)).toBe(true);
+  });
+
+  it('denies stop when there is no open session', () => {
+    expect(canAuthorizeKioskStop(false)).toBe(false);
+  });
+});
+
+describe('shouldKeepSubTaskOnKioskQueue', () => {
+  it('keeps assigned sub-tasks and open-session sub-tasks after unassign', () => {
+    expect(
+      shouldKeepSubTaskOnKioskQueue({
+        isAssigned: true,
+        hasOpenStartedSession: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldKeepSubTaskOnKioskQueue({
+        isAssigned: false,
+        hasOpenStartedSession: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldKeepSubTaskOnKioskQueue({
+        isAssigned: false,
+        hasOpenStartedSession: false,
+      }),
+    ).toBe(false);
   });
 });

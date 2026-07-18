@@ -6,7 +6,10 @@ import {
   shouldCopyTemplateSubtasks,
   type TemplateSubTaskComponent,
 } from '../../../../business/copy-template-subtasks';
-import { rescaleExpectedTimeForTaskQtyChange } from '../../../../business/work-currency';
+import {
+  rescaleExpectedTimeForTaskQtyChange,
+  scaleExpectedTimeByTaskQty,
+} from '../../../../business/work-currency';
 
 const TASK_UID = 'api::task.task';
 const TASK_SERVICE_UID = 'api::task.task';
@@ -122,11 +125,18 @@ export default {
 
     const documentIdsByIndex = new Map<number, string>();
     const sortedPayloads = [...payloads].sort((a, b) => a.index - b.index);
+    const taskQty = Math.max(1, Number(task.qty ?? 1));
 
     for (const data of sortedPayloads) {
       const dependencies = resolveTemplateDependencyIds(
         data.dependencyRefs,
         documentIdsByIndex,
+      );
+      // Pass template unit expectedTime on create. Document middleware may or may
+      // not scale correctly; the update below always writes the canonical value.
+      const scaledExpectedTime = scaleExpectedTimeByTaskQty(
+        data.expectedTime,
+        taskQty,
       );
       const created = await strapi.documents(SUB_TASK_UID).create({
         data: {
@@ -145,9 +155,16 @@ export default {
       });
 
       const subTaskDocumentId = created.documentId;
-      if (subTaskDocumentId) {
-        documentIdsByIndex.set(data.index, subTaskDocumentId);
-      }
+      if (!subTaskDocumentId) continue;
+
+      documentIdsByIndex.set(data.index, subTaskDocumentId);
+
+      // Must use documents().update — db.query({ where: { documentId } }) was a
+      // silent no-op here, which left template unit times in production.
+      await strapi.documents(SUB_TASK_UID).update({
+        documentId: subTaskDocumentId,
+        data: { expectedTime: scaledExpectedTime },
+      });
     }
 
     await strapi.service(TASK_SERVICE_UID).syncTotalExpectedTime(taskDocumentId);

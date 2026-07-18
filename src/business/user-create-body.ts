@@ -17,13 +17,14 @@ async function resolveRoleIdFromType(roleType: string): Promise<number | null> {
 
 /**
  * Maps roleType → role id and fills email before users-permissions validation.
+ * Always keeps synthetic email in sync with username (avoids orphan emails).
  */
 export async function prepareUserWriteBody(
   body: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   const next = { ...body };
 
-  if (!next.email && next.username) {
+  if (next.username) {
     next.email = deriveUserEmail(next.username);
   }
 

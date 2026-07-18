@@ -2,10 +2,13 @@ import type { Core } from '@strapi/strapi';
 
 import { migrateQueuedStatusToWaiting } from './business/migrate-task-status';
 import { registerTaskStepAutomation } from './business/task-step-automation';
+import { registerSubTaskExpectedTimeScaling } from './business/subtask-expected-time-scale';
 
 import { LOCAL_AUTH_PROVIDER } from './business/user-auth';
 import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
+import { DEFAULT_ASSIGN_WARN_MAX } from './business/assign-warn-max';
 import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idle';
+
 
 const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
 const TASK_AUTOMATION_SETTING_UID =
@@ -224,27 +227,55 @@ async function ensureKioskSettingPermissions(strapi: Core.Strapi) {
 
 async function ensureTaskAutomationSettingRecord(strapi: Core.Strapi) {
   const existing = await strapi.documents(TASK_AUTOMATION_SETTING_UID).findFirst();
-  if (existing) return;
-  await strapi.documents(TASK_AUTOMATION_SETTING_UID).create({ data: {} });
+  if (!existing) {
+    await strapi.documents(TASK_AUTOMATION_SETTING_UID).create({
+      data: { assignWarnMax: DEFAULT_ASSIGN_WARN_MAX },
+    });
+    return;
+  }
+  if (
+    typeof (existing as { assignWarnMax?: number | null }).assignWarnMax !==
+    'number'
+  ) {
+    await strapi.documents(TASK_AUTOMATION_SETTING_UID).update({
+      documentId: existing.documentId as string,
+      data: { assignWarnMax: DEFAULT_ASSIGN_WARN_MAX },
+    });
+  }
 }
 
 async function ensureTaskAutomationSettingPermissions(strapi: Core.Strapi) {
   const adminRole = await strapi
     .query('plugin::users-permissions.role')
     .findOne({ where: { type: 'admin' } });
+  const managerRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'manager' } });
+  const leaderRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'leader' } });
 
-  if (!adminRole) return;
+  if (adminRole) {
+    await ensurePermission(
+      strapi,
+      adminRole.id,
+      'api::task-automation-setting.task-automation-setting.find',
+    );
+    await ensurePermission(
+      strapi,
+      adminRole.id,
+      'api::task-automation-setting.task-automation-setting.update',
+    );
+  }
 
-  await ensurePermission(
-    strapi,
-    adminRole.id,
-    'api::task-automation-setting.task-automation-setting.find',
-  );
-  await ensurePermission(
-    strapi,
-    adminRole.id,
-    'api::task-automation-setting.task-automation-setting.update',
-  );
+  for (const role of [managerRole, leaderRole]) {
+    if (!role) continue;
+    await ensurePermission(
+      strapi,
+      role.id,
+      'api::task-automation-setting.task-automation-setting.find',
+    );
+  }
 }
 
 async function ensureCurrencyForSubtasksRecord(strapi: Core.Strapi) {
@@ -323,6 +354,7 @@ async function backfillUserRoleTypes(strapi: Core.Strapi) {
 export default {
   register({ strapi }: { strapi: Core.Strapi }) {
     registerTaskStepAutomation(strapi.documents);
+    registerSubTaskExpectedTimeScaling(strapi.documents);
   },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {

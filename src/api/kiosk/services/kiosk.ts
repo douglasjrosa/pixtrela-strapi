@@ -17,6 +17,7 @@ import {
   resolveColaboratorUserId,
 } from '../../../business/kiosk-jwt';
 import {
+  canAuthorizeKioskStop,
   parseDurationStopBody,
   parseQtyStopBody,
   resolveDurationStop,
@@ -41,7 +42,9 @@ import {
   USERS_TABLE,
   type KioskSubTaskRow,
 } from '../../../business/kiosk-subtasks';
+import { readRelationId } from '../../../business/relation-id';
 import {
+  hasOpenStartedSessionFromActions,
   isSubTaskAtWorkerCapacity,
   listActiveColaboratorIdsFromActivities,
   shouldHideSubTaskFromKioskQueue,
@@ -58,6 +61,25 @@ type StaffActor = {
   documentId: string;
   role: KioskStaffActorRole;
 };
+
+/** Shared columns for assigned + orphan open-session kiosk queue rows. */
+const KIOSK_QUEUE_SUBTASK_SELECT = [
+  'sub_tasks.id',
+  'sub_tasks.document_id',
+  'sub_tasks.name',
+  'sub_tasks.index',
+  'sub_tasks.status',
+  'sub_tasks.qty',
+  'sub_tasks.sharing_type',
+  'sub_tasks.time_spent',
+  'sub_tasks.expected_time',
+  'sub_tasks.activation_status',
+  'sub_tasks.max_same_time_workers',
+  'tasks.document_id as task_document_id',
+  'tasks.name as task_name',
+  'tasks.index as task_index',
+  'tasks.qty as task_qty',
+] as const;
 
 function readDocumentId(row: {
   documentId?: string;
@@ -247,7 +269,10 @@ export default {
 
     if (!colaborator?.id) return [];
 
-    const rows = (await knex(`${SUB_TASKS_TABLE} as sub_tasks`)
+    const openSessionSubTaskIds =
+      await fetchOpenStartedSubTaskIdsForColaborator(Number(colaborator.id));
+
+    const assignedRows = (await knex(`${SUB_TASKS_TABLE} as sub_tasks`)
       .join(
         `${SUB_TASK_ASSIGNED_LINK_TABLE} as assignment`,
         'assignment.sub_task_id',
@@ -261,23 +286,32 @@ export default {
       .leftJoin(`${TASKS_TABLE} as tasks`, 'tasks.id', 'task_link.task_id')
       .where('assignment.user_id', colaborator.id)
       .orderBy('sub_tasks.index', 'asc')
-      .select(
-        'sub_tasks.id',
-        'sub_tasks.document_id',
-        'sub_tasks.name',
-        'sub_tasks.index',
-        'sub_tasks.status',
-        'sub_tasks.qty',
-        'sub_tasks.sharing_type',
-        'sub_tasks.time_spent',
-        'sub_tasks.expected_time',
-        'sub_tasks.activation_status',
-        'sub_tasks.max_same_time_workers',
-        'tasks.document_id as task_document_id',
-        'tasks.name as task_name',
-        'tasks.index as task_index',
-        'tasks.qty as task_qty',
-      )) as AssignedSubTaskDbRow[];
+      .select(...KIOSK_QUEUE_SUBTASK_SELECT)) as AssignedSubTaskDbRow[];
+
+    const assignedIds = new Set(
+      assignedRows
+        .map((row) => readRelationId(row.id))
+        .filter((id): id is number => id !== null),
+    );
+    const orphanOpenIds = openSessionSubTaskIds.filter(
+      (id) => !assignedIds.has(id),
+    );
+
+    let orphanRows: AssignedSubTaskDbRow[] = [];
+    if (orphanOpenIds.length > 0) {
+      orphanRows = (await knex(`${SUB_TASKS_TABLE} as sub_tasks`)
+        .leftJoin(
+          `${SUB_TASK_TASK_LINK_TABLE} as task_link`,
+          'task_link.sub_task_id',
+          'sub_tasks.id',
+        )
+        .leftJoin(`${TASKS_TABLE} as tasks`, 'tasks.id', 'task_link.task_id')
+        .whereIn('sub_tasks.id', orphanOpenIds)
+        .orderBy('sub_tasks.index', 'asc')
+        .select(...KIOSK_QUEUE_SUBTASK_SELECT)) as AssignedSubTaskDbRow[];
+    }
+
+    const rows = [...assignedRows, ...orphanRows];
 
     const subTaskIds = rows
       .map((row) => row.id)
@@ -371,7 +405,7 @@ export default {
     }
 
     const activeIds = await fetchActiveColaboratorIdsForSubTask(Number(subTask.id));
-    if (activeIds.includes(colaboratorUserId)) {
+    if (activeIds.some((id) => Number(id) === Number(colaboratorUserId))) {
       throw new Error('forbidden');
     }
     const maxSameTimeWorkers = Number(
@@ -411,7 +445,8 @@ export default {
       knex,
       colaboratorDocumentId,
     );
-    await assertSubTaskAssigned(colaboratorUserId, subTaskDocumentId);
+    // Assignment is only required to join. After start, stop is allowed while
+    // the colaborator still has an open started session — even if unassigned.
 
     const subTask = await strapi.db.query(SUB_TASK_UID).findOne({
       where: { documentId: subTaskDocumentId },
@@ -419,29 +454,37 @@ export default {
     });
     if (!subTask) throw new Error('notFound');
 
-    const activeIdsBefore = await fetchActiveColaboratorIdsForSubTask(
-      Number(subTask.id),
-    );
-    if (!activeIdsBefore.includes(colaboratorUserId)) {
+    const subTaskId = Number(subTask.id);
+    const sessionActivities = await strapi.db.query(ACTIVITY_UID).findMany({
+      where: {
+        subTask: subTaskId,
+        colaborator: colaboratorUserId,
+        action: { $in: ['started', 'stoped'] },
+      },
+      orderBy: { timestamp: 'asc' },
+    });
+    const sessionActions = sessionActivities
+      .map((activity) => activity.action)
+      .filter(
+        (action): action is 'started' | 'stoped' =>
+          action === 'started' || action === 'stoped',
+      );
+    if (!canAuthorizeKioskStop(hasOpenStartedSessionFromActions(sessionActions))) {
       throw new Error('forbidden');
     }
 
+    const activeIdsBefore = await fetchActiveColaboratorIdsForSubTask(subTaskId);
     const endedAt = new Date();
-    const openActivity = await strapi.db.query(ACTIVITY_UID).findOne({
-      where: {
-        subTask: subTask.id,
-        colaborator: colaboratorUserId,
-        action: 'started',
-      },
-      orderBy: { timestamp: 'desc' },
-    });
+    const openStarted = [...sessionActivities]
+      .reverse()
+      .find((activity) => activity.action === 'started');
 
     const sessionSeconds =
-      openActivity?.timestamp instanceof Date
-        ? calculateActivityDurationSeconds(openActivity.timestamp, endedAt)
-        : openActivity?.timestamp
+      openStarted?.timestamp instanceof Date
+        ? calculateActivityDurationSeconds(openStarted.timestamp, endedAt)
+        : openStarted?.timestamp
           ? calculateActivityDurationSeconds(
-              new Date(openActivity.timestamp),
+              new Date(openStarted.timestamp),
               endedAt,
             )
           : 0;
@@ -462,7 +505,7 @@ export default {
         : resolveDurationStop(parseDurationStopBody(body));
 
     const remainingActiveIds = activeIdsBefore.filter(
-      (id) => id !== colaboratorUserId,
+      (id) => Number(id) !== Number(colaboratorUserId),
     );
     const stopResult = resolveStopStatusWithPeers(
       baseStopResult,
@@ -731,19 +774,19 @@ async function fetchActiveColaboratorIdsBySubTaskId(
   const bySubTask = new Map<number, ActivityTimeRow[]>();
 
   for (const activity of activities) {
-    const subTask = activity.subTask as { id?: number } | null;
-    const colaborator = activity.colaborator as { id?: number } | null;
+    const subTaskId = readRelationId(activity.subTask);
+    const colaboratorId = readRelationId(activity.colaborator);
     const timestamp = activity.timestamp;
-    if (!subTask?.id || !colaborator?.id || !timestamp) continue;
+    if (subTaskId === null || colaboratorId === null || !timestamp) continue;
     if (activity.action !== 'started' && activity.action !== 'stoped') continue;
 
-    const rows = bySubTask.get(subTask.id) ?? [];
+    const rows = bySubTask.get(subTaskId) ?? [];
     rows.push({
       action: activity.action,
       timestamp: timestamp instanceof Date ? timestamp : new Date(timestamp),
-      colaboratorId: colaborator.id,
+      colaboratorId,
     });
-    bySubTask.set(subTask.id, rows);
+    bySubTask.set(subTaskId, rows);
   }
 
   const result = new Map<number, number[]>();
@@ -751,6 +794,36 @@ async function fetchActiveColaboratorIdsBySubTaskId(
     result.set(subTaskId, listActiveColaboratorIdsFromActivities(rows));
   }
   return result;
+}
+
+async function fetchOpenStartedSubTaskIdsForColaborator(
+  colaboratorUserId: number,
+): Promise<number[]> {
+  const activities = await strapi.db.query(ACTIVITY_UID).findMany({
+    where: {
+      colaborator: colaboratorUserId,
+      action: { $in: ['started', 'stoped'] },
+    },
+    orderBy: { timestamp: 'asc' },
+    populate: { subTask: { select: ['id'] } },
+  });
+
+  const openBySubTask = new Map<number, boolean>();
+  for (const activity of activities) {
+    const subTaskId = readRelationId(activity.subTask);
+    if (subTaskId === null) continue;
+    if (activity.action === 'started') {
+      openBySubTask.set(subTaskId, true);
+      continue;
+    }
+    if (activity.action === 'stoped') {
+      openBySubTask.set(subTaskId, false);
+    }
+  }
+
+  return [...openBySubTask.entries()]
+    .filter(([, isOpen]) => isOpen)
+    .map(([subTaskId]) => subTaskId);
 }
 
 async function fetchOpenStartedAtBySubTaskId(
@@ -771,16 +844,16 @@ async function fetchOpenStartedAtBySubTaskId(
 
   const refs = activities
     .map((activity) => {
-      const subTask = activity.subTask as { id?: number } | null;
+      const subTaskId = readRelationId(activity.subTask);
       const timestamp = activity.timestamp;
-      if (!subTask?.id || !timestamp) return null;
+      if (subTaskId === null || !timestamp) return null;
       if (activity.action !== 'started' && activity.action !== 'stoped') {
         return null;
       }
       const iso =
         timestamp instanceof Date ? timestamp.toISOString() : String(timestamp);
       return {
-        subTaskId: subTask.id,
+        subTaskId,
         action: activity.action as 'started' | 'stoped',
         timestamp: iso,
       };

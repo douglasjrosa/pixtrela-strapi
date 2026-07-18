@@ -5,7 +5,7 @@
     "singularName": "task-automation-setting",
     "pluralName": "task-automation-settings",
     "displayName": "Task Automation Setting",
-    "description": "Maps task statuses to kanban steps"
+    "description": "Maps task statuses to kanban steps and board assign warnings"
   },
   "options": {
     "draftAndPublish": false
@@ -30,6 +30,13 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::step.step"
+    },
+    "assignWarnMax": {
+      "type": "integer",
+      "required": true,
+      "default": 4,
+      "min": 0,
+      "max": 100
     }
   }
 }

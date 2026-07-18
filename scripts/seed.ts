@@ -1,6 +1,7 @@
 import { compileStrapi, createStrapi } from '@strapi/strapi';
 
 import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from '../src/business/kiosk-session-idle';
+import { DEFAULT_ASSIGN_WARN_MAX } from '../src/business/assign-warn-max';
 
 const CURRENCY_UID = 'api::currency.currency';
 const CURRENCY_FOR_SUBTASKS_UID =
@@ -80,7 +81,9 @@ async function seed() {
     .documents(TASK_AUTOMATION_SETTING_UID)
     .findFirst();
   if (!taskAutomationSetting) {
-    await app.documents(TASK_AUTOMATION_SETTING_UID).create({ data: {} });
+    await app.documents(TASK_AUTOMATION_SETTING_UID).create({
+      data: { assignWarnMax: DEFAULT_ASSIGN_WARN_MAX },
+    });
   }
 
   app.log.info('[pixtrela] seed complete');

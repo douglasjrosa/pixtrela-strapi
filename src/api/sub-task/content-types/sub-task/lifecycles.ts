@@ -1,5 +1,4 @@
 import { assertReasonWhenDeactivating } from '../../../../business/deactivation-reason';
-import { scaleExpectedTimeByTaskQty } from '../../../../business/work-currency';
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   resolveTaskStatusFromSubTasks,
@@ -104,60 +103,12 @@ function assertDisablingReason(data: Record<string, unknown> | undefined): void 
   );
 }
 
-async function resolveTaskQtyFromRelation(
-  taskRef: unknown,
-): Promise<number> {
-  if (taskRef == null) return 1;
-
-  if (typeof taskRef === 'object' && taskRef !== null) {
-    const record = taskRef as { documentId?: string; id?: number; qty?: number };
-    if (typeof record.qty === 'number') return Math.max(1, record.qty);
-    if (typeof record.documentId === 'string') {
-      const task = await strapi.documents(TASK_UID).findOne({
-        documentId: record.documentId,
-        fields: ['qty'],
-      });
-      return Math.max(1, Number(task?.qty ?? 1));
-    }
-    if (typeof record.id === 'number') {
-      const task = await strapi.db.query(TASK_UID).findOne({
-        where: { id: record.id },
-        select: ['qty'],
-      });
-      return Math.max(1, Number(task?.qty ?? 1));
-    }
-  }
-
-  if (typeof taskRef === 'string') {
-    const task = await strapi.documents(TASK_UID).findOne({
-      documentId: taskRef,
-      fields: ['qty'],
-    });
-    return Math.max(1, Number(task?.qty ?? 1));
-  }
-
-  if (typeof taskRef === 'number') {
-    const task = await strapi.db.query(TASK_UID).findOne({
-      where: { id: taskRef },
-      select: ['qty'],
-    });
-    return Math.max(1, Number(task?.qty ?? 1));
-  }
-
-  return 1;
-}
-
 export default {
   async beforeCreate(event: { params: { data?: Record<string, unknown> } }) {
-    const data = event.params.data;
-    assertDisablingReason(data);
-    if (!data) return;
-
-    const taskQty = await resolveTaskQtyFromRelation(data.task);
-    data.expectedTime = scaleExpectedTimeByTaskQty(
-      Number(data.expectedTime ?? 0),
-      taskQty,
-    );
+    assertDisablingReason(event.params.data);
+    // expectedTime × task.qty is applied by Document Service middleware
+    // (registerSubTaskExpectedTimeScaling) — content-type beforeCreate is not
+    // reliable for strapi.documents().create in Strapi 5.
   },
 
   async beforeUpdate(event: { params: { data?: Record<string, unknown> } }) {

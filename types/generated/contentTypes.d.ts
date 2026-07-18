@@ -812,7 +812,7 @@ export interface ApiTaskAutomationSettingTaskAutomationSetting
   extends Struct.SingleTypeSchema {
   collectionName: 'task_automation_settings';
   info: {
-    description: 'Maps task statuses to kanban steps';
+    description: 'Maps task statuses to kanban steps and board assign warnings';
     displayName: 'Task Automation Setting';
     pluralName: 'task-automation-settings';
     singularName: 'task-automation-setting';
@@ -821,6 +821,16 @@ export interface ApiTaskAutomationSettingTaskAutomationSetting
     draftAndPublish: false;
   };
   attributes: {
+    assignWarnMax: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<4>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;

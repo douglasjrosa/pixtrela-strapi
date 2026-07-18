@@ -1,19 +1,27 @@
 import type { ActivityTimeRow } from './task-time-spent';
 
+/**
+ * Walks chronological started/stoped actions for one colaborator.
+ * Assignment is irrelevant — only the open session matters.
+ */
+export function hasOpenStartedSessionFromActions(
+  actions: ReadonlyArray<'started' | 'stoped'>,
+): boolean {
+  let isActive = false;
+  for (const action of actions) {
+    if (action === 'started') isActive = true;
+    if (action === 'stoped') isActive = false;
+  }
+  return isActive;
+}
+
 function isColaboratorActiveFromSortedActivities(
   rows: ActivityTimeRow[],
 ): boolean {
   const sorted = [...rows].sort(
     (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
   );
-  let isActive = false;
-
-  for (const activity of sorted) {
-    if (activity.action === 'started') isActive = true;
-    if (activity.action === 'stoped') isActive = false;
-  }
-
-  return isActive;
+  return hasOpenStartedSessionFromActions(sorted.map((row) => row.action));
 }
 
 export function listActiveColaboratorIdsFromActivities(

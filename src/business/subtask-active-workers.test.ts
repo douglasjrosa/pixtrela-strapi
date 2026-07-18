@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   countActiveWorkersFromActivities,
+  hasOpenStartedSessionFromActions,
   isSubTaskAtWorkerCapacity,
   listActiveColaboratorIdsFromActivities,
   shouldHideSubTaskFromKioskQueue,
@@ -19,6 +20,16 @@ function activity(
     timestamp: new Date(timestamp),
   };
 }
+
+describe('hasOpenStartedSessionFromActions', () => {
+  it('is true only while the latest open action is started', () => {
+    expect(hasOpenStartedSessionFromActions(['started'])).toBe(true);
+    expect(hasOpenStartedSessionFromActions(['started', 'stoped'])).toBe(false);
+    expect(
+      hasOpenStartedSessionFromActions(['started', 'stoped', 'started']),
+    ).toBe(true);
+  });
+});
 
 describe('countActiveWorkersFromActivities', () => {
   it('counts colaborators with an open started session', () => {

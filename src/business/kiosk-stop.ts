@@ -70,3 +70,23 @@ export function resolveStopStatusWithPeers(
     subTaskStatus: 'producing',
   };
 }
+
+/**
+ * Stop is authorized by an open started session, not by current assignment.
+ * Admins may clear assignees while workers are still producing; those workers
+ * must still be able to exit and close the session.
+ */
+export function canAuthorizeKioskStop(hasOpenStartedSession: boolean): boolean {
+  return hasOpenStartedSession;
+}
+
+/**
+ * Keep the sub-task on the kiosk queue while assigned OR while the viewer still
+ * has an open started session (even after being unassigned mid-work).
+ */
+export function shouldKeepSubTaskOnKioskQueue(input: {
+  isAssigned: boolean;
+  hasOpenStartedSession: boolean;
+}): boolean {
+  return input.isAssigned || input.hasOpenStartedSession;
+}
