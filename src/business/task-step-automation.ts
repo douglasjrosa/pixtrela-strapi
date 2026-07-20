@@ -1,15 +1,8 @@
-import type { TaskStatus } from './task-completion';
+import { TASK_STATUSES, type TaskStatus } from './task-completion';
 
 const TASK_UID = 'api::task.task';
 const TASK_AUTOMATION_SETTING_UID =
   'api::task-automation-setting.task-automation-setting';
-
-const TASK_STATUSES: TaskStatus[] = [
-  'waiting',
-  'producing',
-  'paused',
-  'finished',
-];
 
 export type TaskStatusStepMapping = Partial<Record<TaskStatus, string>>;
 
@@ -20,6 +13,8 @@ type AutomationSettingRecord = {
   producingStep?: StepRef;
   pausedStep?: StepRef;
   finishedStep?: StepRef;
+  reviewedStep?: StepRef;
+  deliveredStep?: StepRef;
 } | null;
 
 export type TaskDocumentMiddlewareContext = {
@@ -71,6 +66,8 @@ export function mapAutomationSettingToStatusSteps(
     producing: readStepDocumentId(setting.producingStep),
     paused: readStepDocumentId(setting.pausedStep),
     finished: readStepDocumentId(setting.finishedStep),
+    reviewed: readStepDocumentId(setting.reviewedStep),
+    delivered: readStepDocumentId(setting.deliveredStep),
   };
 }
 
@@ -90,6 +87,8 @@ export async function loadTaskStatusStepMapping(): Promise<TaskStatusStepMapping
       producingStep: { fields: ['documentId'] },
       pausedStep: { fields: ['documentId'] },
       finishedStep: { fields: ['documentId'] },
+      reviewedStep: { fields: ['documentId'] },
+      deliveredStep: { fields: ['documentId'] },
     },
   });
 

@@ -595,7 +595,7 @@ export interface ApiCurrencyCurrency extends Struct.CollectionTypeSchema {
     currencyPerSecond: Schema.Attribute.Decimal &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<0>;
-    icon: Schema.Attribute.String;
+    iconMedia: Schema.Attribute.Media<'images'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -681,6 +681,118 @@ export interface ApiKioskSettingKioskSetting extends Struct.SingleTypeSchema {
         number
       > &
       Schema.Attribute.DefaultTo<7>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiRouteThemeRouteTheme extends Struct.CollectionTypeSchema {
+  collectionName: 'route_themes';
+  info: {
+    description: 'Background color or image per app route surface';
+    displayName: 'Route Theme';
+    pluralName: 'route-themes';
+    singularName: 'route-theme';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    backgroundColor: Schema.Attribute.String;
+    backgroundColorOpacity: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<100>;
+    backgroundImage: Schema.Attribute.Media<'images'>;
+    backgroundMotion: Schema.Attribute.Enumeration<
+      ['scroll', 'fixed', 'parallax']
+    > &
+      Schema.Attribute.DefaultTo<'scroll'>;
+    backgroundPosition: Schema.Attribute.Enumeration<
+      ['center', 'top', 'bottom', 'left', 'right']
+    > &
+      Schema.Attribute.DefaultTo<'center'>;
+    backgroundRepeat: Schema.Attribute.Enumeration<
+      ['no-repeat', 'repeat', 'repeat-x', 'repeat-y']
+    > &
+      Schema.Attribute.DefaultTo<'no-repeat'>;
+    backgroundSize: Schema.Attribute.Enumeration<['cover', 'contain', 'auto']> &
+      Schema.Attribute.DefaultTo<'cover'>;
+    contentMarginDesktop: Schema.Attribute.Enumeration<
+      ['none', 'sm', 'md', 'lg', 'xl']
+    > &
+      Schema.Attribute.DefaultTo<'lg'>;
+    contentMarginMobile: Schema.Attribute.Enumeration<
+      ['none', 'sm', 'md', 'lg', 'xl']
+    > &
+      Schema.Attribute.DefaultTo<'md'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    foregroundColor: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'#002555'>;
+    label: Schema.Attribute.String & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::route-theme.route-theme'
+    > &
+      Schema.Attribute.Private;
+    parallaxBleed: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 40;
+          min: 10;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<20>;
+    parallaxDirection: Schema.Attribute.Enumeration<['normal', 'reverse']> &
+      Schema.Attribute.DefaultTo<'normal'>;
+    parallaxIntensity: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<35>;
+    publishedAt: Schema.Attribute.DateTime;
+    routeKey: Schema.Attribute.Enumeration<
+      [
+        'login',
+        'staff-home',
+        'board',
+        'tasks',
+        'templates',
+        'teams',
+        'awards',
+        'users',
+        'settings',
+        'colaborator',
+        'kiosk',
+      ]
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    surfaceColor: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'#ffffff'>;
+    surfaceColorOpacity: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 100;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<100>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -834,6 +946,7 @@ export interface ApiTaskAutomationSettingTaskAutomationSetting
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    deliveredStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     finishedStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -844,6 +957,7 @@ export interface ApiTaskAutomationSettingTaskAutomationSetting
     pausedStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     producingStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     publishedAt: Schema.Attribute.DateTime;
+    reviewedStep: Schema.Attribute.Relation<'manyToOne', 'api::step.step'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -881,7 +995,7 @@ export interface ApiTaskTask extends Struct.CollectionTypeSchema {
     reasonForDeactivation: Schema.Attribute.Text;
     startedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
-      ['waiting', 'producing', 'paused', 'finished']
+      ['waiting', 'producing', 'paused', 'finished', 'reviewed', 'delivered']
     > &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'waiting'>;
@@ -1437,6 +1551,7 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    facePhoto: Schema.Attribute.Media<'images'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1489,6 +1604,7 @@ declare module '@strapi/strapi' {
       'api::currency.currency': ApiCurrencyCurrency;
       'api::exchange.exchange': ApiExchangeExchange;
       'api::kiosk-setting.kiosk-setting': ApiKioskSettingKioskSetting;
+      'api::route-theme.route-theme': ApiRouteThemeRouteTheme;
       'api::step.step': ApiStepStep;
       'api::sub-task-preset.sub-task-preset': ApiSubTaskPresetSubTaskPreset;
       'api::sub-task.sub-task': ApiSubTaskSubTask;

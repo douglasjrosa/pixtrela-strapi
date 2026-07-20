@@ -3,6 +3,7 @@ export type KioskColaboratorRow = {
   name: string;
   code: number;
   avatarUrl?: string | null;
+  facePhotoUrl?: string | null;
 };
 
 export type KioskStaffActorRole = 'admin' | 'manager' | 'leader';

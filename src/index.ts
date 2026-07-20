@@ -8,6 +8,7 @@ import { LOCAL_AUTH_PROVIDER } from './business/user-auth';
 import { UPLOAD_CONTENT_API_ACTIONS } from './business/upload-permissions';
 import { DEFAULT_ASSIGN_WARN_MAX } from './business/assign-warn-max';
 import { DEFAULT_KIOSK_SESSION_IDLE_SECONDS } from './business/kiosk-session-idle';
+import { ROUTE_THEME_SEED } from './business/route-theme';
 
 
 const KIOSK_SETTING_UID = 'api::kiosk-setting.kiosk-setting';
@@ -16,6 +17,7 @@ const TASK_AUTOMATION_SETTING_UID =
 const CURRENCY_FOR_SUBTASKS_UID =
   'api::currency-for-subtasks.currency-for-subtasks';
 const CURRENCY_UID = 'api::currency.currency';
+const ROUTE_THEME_UID = 'api::route-theme.route-theme';
 
 type ActionName = 'find' | 'findOne' | 'create' | 'update' | 'delete';
 type ApiName =
@@ -29,7 +31,8 @@ type ApiName =
   | 'sub-task-preset'
   | 'activity'
   | 'balance'
-  | 'exchange';
+  | 'exchange'
+  | 'route-theme';
 
 const ALL_APIS: ApiName[] = [
   'currency',
@@ -43,6 +46,7 @@ const ALL_APIS: ApiName[] = [
   'activity',
   'balance',
   'exchange',
+  'route-theme',
 ];
 const ALL_ACTIONS: ActionName[] = ['find', 'findOne', 'create', 'update', 'delete'];
 const READ: ActionName[] = ['find', 'findOne'];
@@ -75,6 +79,7 @@ const PERMISSIONS: Record<string, Partial<Record<ApiName, ActionName[]>>> = {
     'sub-task': WRITE,
     'sub-task-preset': [...WRITE, 'delete'],
     activity: WRITE,
+    'route-theme': READ,
   },
   leader: {
     ...READ_ALL,
@@ -82,12 +87,14 @@ const PERMISSIONS: Record<string, Partial<Record<ApiName, ActionName[]>>> = {
     task: WRITE,
     'sub-task': WRITE,
     activity: WRITE,
+    'route-theme': READ,
   },
   colaborator: {
     ...READ_ALL,
     'sub-task': ['find', 'findOne', 'update'],
     activity: ['find', 'findOne', 'create'],
     exchange: ['find', 'findOne', 'create'],
+    'route-theme': READ,
   },
 };
 
@@ -322,6 +329,56 @@ async function ensureCurrencyForSubtasksPermissions(strapi: Core.Strapi) {
   );
 }
 
+async function ensureRouteThemeRecords(strapi: Core.Strapi) {
+  const existing = await strapi.documents(ROUTE_THEME_UID).findMany({
+    fields: ['routeKey'],
+    limit: 50,
+  });
+  const present = new Set(
+    existing.map((row) => (row as { routeKey?: string }).routeKey).filter(Boolean),
+  );
+
+  for (const seed of ROUTE_THEME_SEED) {
+    if (present.has(seed.routeKey)) continue;
+    await strapi.documents(ROUTE_THEME_UID).create({
+      data: {
+        routeKey: seed.routeKey,
+        label: seed.label,
+      },
+    });
+  }
+}
+
+async function ensureKioskRouteThemeRead(strapi: Core.Strapi) {
+  const kioskRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'kiosk' } });
+  if (!kioskRole) return;
+  await ensurePermission(strapi, kioskRole.id, 'api::route-theme.route-theme.find');
+  await ensurePermission(
+    strapi,
+    kioskRole.id,
+    'api::route-theme.route-theme.findOne',
+  );
+}
+
+async function ensurePublicRouteThemeRead(strapi: Core.Strapi) {
+  const publicRole = await strapi
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'public' } });
+  if (!publicRole) return;
+  await ensurePermission(
+    strapi,
+    publicRole.id,
+    'api::route-theme.route-theme.find',
+  );
+  await ensurePermission(
+    strapi,
+    publicRole.id,
+    'api::route-theme.route-theme.findOne',
+  );
+}
+
 async function ensureDashboardPermissions(strapi: Core.Strapi, roleType: string, roleId: number) {
   if (roleType === 'kiosk') return;
 
@@ -380,6 +437,9 @@ export default {
     await ensureTaskAutomationSettingPermissions(strapi);
     await ensureCurrencyForSubtasksRecord(strapi);
     await ensureCurrencyForSubtasksPermissions(strapi);
+    await ensureRouteThemeRecords(strapi);
+    await ensureKioskRouteThemeRead(strapi);
+    await ensurePublicRouteThemeRead(strapi);
     await backfillUserRoleTypes(strapi);
     await migrateQueuedStatusToWaiting(strapi.db.connection);
     strapi.log.info('[pixtrela] roles and permissions ensured');

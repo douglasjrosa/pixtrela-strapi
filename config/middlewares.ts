@@ -11,6 +11,7 @@ const config = ({
     config: {
       origin: env('CORS_ORIGINS', 'http://localhost:3000').split(','),
       credentials: true,
+      headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
     },
   },
   'strapi::poweredBy',

@@ -46,6 +46,33 @@ export default {
       },
     },
     {
+      method: 'POST',
+      path: '/kiosk/staff/users/:documentId/colaborators/:colaboratorDocumentId/face-photo',
+      handler: 'kiosk.setColaboratorFacePhoto',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/kiosk/directory/teams',
+      handler: 'kiosk.listDirectoryTeams',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/kiosk/directory/teams/:teamDocumentId/colaborators',
+      handler: 'kiosk.listDirectoryTeamColaborators',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
       method: 'GET',
       path: '/kiosk/colaborators/:documentId/sub-tasks',
       handler: 'kiosk.listSubTasks',

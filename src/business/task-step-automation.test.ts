@@ -36,11 +36,16 @@ describe('mapAutomationSettingToStatusSteps', () => {
         producingStep: { documentId: 'step-run' },
         pausedStep: null,
         finishedStep: { documentId: 'step-done' },
+        reviewedStep: { documentId: 'step-reviewed' },
+        deliveredStep: { documentId: 'step-delivered' },
       }),
     ).toEqual({
       waiting: 'step-wait',
       producing: 'step-run',
+      paused: undefined,
       finished: 'step-done',
+      reviewed: 'step-reviewed',
+      delivered: 'step-delivered',
     });
   });
 });

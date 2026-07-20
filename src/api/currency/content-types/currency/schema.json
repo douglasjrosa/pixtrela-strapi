@@ -16,8 +16,10 @@
       "required": true,
       "unique": true
     },
-    "icon": {
-      "type": "string"
+    "iconMedia": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
     },
     "title": {
       "type": "string"

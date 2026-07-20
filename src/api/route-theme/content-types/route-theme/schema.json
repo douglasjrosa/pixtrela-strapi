@@ -1,0 +1,113 @@
+{
+  "kind": "collectionType",
+  "collectionName": "route_themes",
+  "info": {
+    "singularName": "route-theme",
+    "pluralName": "route-themes",
+    "displayName": "Route Theme",
+    "description": "Background color or image per app route surface"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "routeKey": {
+      "type": "enumeration",
+      "enum": [
+        "login",
+        "staff-home",
+        "board",
+        "tasks",
+        "templates",
+        "teams",
+        "awards",
+        "users",
+        "settings",
+        "colaborator",
+        "kiosk"
+      ],
+      "required": true,
+      "unique": true
+    },
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "backgroundColor": {
+      "type": "string"
+    },
+    "backgroundColorOpacity": {
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 100
+    },
+    "backgroundImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "backgroundSize": {
+      "type": "enumeration",
+      "enum": ["cover", "contain", "auto"],
+      "default": "cover"
+    },
+    "backgroundPosition": {
+      "type": "enumeration",
+      "enum": ["center", "top", "bottom", "left", "right"],
+      "default": "center"
+    },
+    "backgroundRepeat": {
+      "type": "enumeration",
+      "enum": ["no-repeat", "repeat", "repeat-x", "repeat-y"],
+      "default": "no-repeat"
+    },
+    "backgroundMotion": {
+      "type": "enumeration",
+      "enum": ["scroll", "fixed", "parallax"],
+      "default": "scroll"
+    },
+    "parallaxIntensity": {
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 35
+    },
+    "parallaxDirection": {
+      "type": "enumeration",
+      "enum": ["normal", "reverse"],
+      "default": "normal"
+    },
+    "parallaxBleed": {
+      "type": "integer",
+      "min": 10,
+      "max": 40,
+      "default": 20
+    },
+    "contentMarginMobile": {
+      "type": "enumeration",
+      "enum": ["none", "sm", "md", "lg", "xl"],
+      "default": "md"
+    },
+    "contentMarginDesktop": {
+      "type": "enumeration",
+      "enum": ["none", "sm", "md", "lg", "xl"],
+      "default": "lg"
+    },
+    "foregroundColor": {
+      "type": "string",
+      "default": "#002555"
+    },
+    "surfaceColor": {
+      "type": "string",
+      "default": "#ffffff"
+    },
+    "surfaceColorOpacity": {
+      "type": "integer",
+      "min": 0,
+      "max": 100,
+      "default": 100
+    }
+  }
+}

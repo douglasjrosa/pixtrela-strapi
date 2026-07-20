@@ -50,7 +50,9 @@
         "waiting",
         "producing",
         "paused",
-        "finished"
+        "finished",
+        "reviewed",
+        "delivered"
       ],
       "default": "waiting",
       "required": true

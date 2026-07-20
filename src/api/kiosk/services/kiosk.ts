@@ -7,11 +7,21 @@ import {
   validateKioskAvatarFile,
 } from '../../../business/kiosk-avatar';
 import {
+  mapActiveDirectoryTeams,
+  mapDirectoryColaborators,
+  type KioskDirectoryColaboratorRow,
+  type KioskDirectoryTeamRow,
+} from '../../../business/kiosk-directory';
+import {
+  validateKioskFacePhotoFile,
+} from '../../../business/kiosk-face-photo';
+import {
   canStaffSetColaboratorPassword,
   filterColaboratorsForStaffRole,
   type KioskColaboratorRow,
   type KioskStaffActorRole,
 } from '../../../business/kiosk-staff-colaborators';
+import { ACTIVE_TEAM_FILTER, isTeamActive } from '../../../business/team-active';
 import {
   assertKioskJwt,
   resolveColaboratorUserId,
@@ -157,13 +167,25 @@ async function readColaboratorAvatarUrl(documentId: string): Promise<string | nu
   return avatar?.url ? String(avatar.url) : null;
 }
 
-async function mapColaboratorsWithAvatars(
+async function readColaboratorFacePhotoUrl(
+  documentId: string,
+): Promise<string | null> {
+  const user = await strapi.documents(USER_UID).findOne({
+    documentId,
+    populate: { facePhoto: { fields: ['url'] } },
+  });
+  const facePhoto = user?.facePhoto as { url?: string } | null | undefined;
+  return facePhoto?.url ? String(facePhoto.url) : null;
+}
+
+async function mapColaboratorsWithMedia(
   colaborators: KioskColaboratorRow[],
 ): Promise<KioskColaboratorRow[]> {
   return Promise.all(
     colaborators.map(async (colaborator) => ({
       ...colaborator,
       avatarUrl: await readColaboratorAvatarUrl(colaborator.documentId),
+      facePhotoUrl: await readColaboratorFacePhotoUrl(colaborator.documentId),
     })),
   );
 }
@@ -550,7 +572,7 @@ export default {
         ? await fetchLeaderTeamColaboratorDocumentIds(actor.id)
         : new Set<string>();
 
-    return mapColaboratorsWithAvatars(
+    return mapColaboratorsWithMedia(
       filterColaboratorsForStaffRole(actor.role, colaborators, teamIds),
     );
   },
@@ -631,6 +653,122 @@ export default {
       ? String(fileUrl)
       : await readColaboratorAvatarUrl(colaboratorDocumentId);
     return { avatarUrl };
+  },
+
+  async setColaboratorFacePhoto(
+    staffDocumentId: string,
+    colaboratorDocumentId: string,
+    fileBuffer: Buffer,
+    mimeType: string,
+    fileName: string,
+  ): Promise<{ facePhotoUrl: string | null }> {
+    await assertStaffCanManageColaborator(staffDocumentId, colaboratorDocumentId);
+
+    const validation = validateKioskFacePhotoFile(
+      fileBuffer,
+      mimeType,
+      fileBuffer.length,
+    );
+    if (validation.ok === false) {
+      throw new Error(validation.error);
+    }
+
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'kiosk-face-'));
+    const safeName =
+      fileName.replace(/[^a-zA-Z0-9._-]/g, '_') || 'face-photo.jpg';
+    const tmpPath = path.join(tmpDir, safeName);
+
+    let uploaded: unknown;
+    try {
+      await fs.writeFile(tmpPath, fileBuffer);
+      uploaded = await strapi.plugin('upload').service('upload').upload({
+        data: {
+          fileInfo: {
+            name: fileName,
+            alternativeText: 'Colaborator face recognition photo',
+          },
+        },
+        files: {
+          filepath: tmpPath,
+          originalFilename: fileName,
+          mimetype: mimeType,
+          size: fileBuffer.length,
+        },
+      });
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error ? uploadError.message : 'uploadException';
+      throw new Error(`uploadFailed:${message}`);
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+
+    const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+    const fileId = (file as { id?: number } | null)?.id;
+    if (!fileId) throw new Error('uploadFailed');
+
+    await strapi.documents(USER_UID).update({
+      documentId: colaboratorDocumentId,
+      data: { facePhoto: fileId },
+    });
+
+    const fileUrl = (file as { url?: string } | null)?.url;
+    const facePhotoUrl = fileUrl
+      ? String(fileUrl)
+      : await readColaboratorFacePhotoUrl(colaboratorDocumentId);
+    return { facePhotoUrl };
+  },
+
+  async listDirectoryTeams(): Promise<KioskDirectoryTeamRow[]> {
+    const teams = await strapi.documents(TEAM_UID).findMany({
+      filters: ACTIVE_TEAM_FILTER,
+      fields: ['name', 'untill'],
+      sort: ['name:asc'],
+    });
+
+    return mapActiveDirectoryTeams(
+      (teams ?? []) as Array<{
+        documentId?: string;
+        name?: string;
+        untill?: string | Date | null;
+      }>,
+    );
+  },
+
+  async listDirectoryTeamColaborators(
+    teamDocumentId: string,
+  ): Promise<KioskDirectoryColaboratorRow[]> {
+    const team = await strapi.documents(TEAM_UID).findOne({
+      documentId: teamDocumentId,
+      fields: ['name', 'untill'],
+      populate: {
+        colaborators: {
+          fields: ['name', 'username', 'roleType', 'blocked'],
+          populate: { facePhoto: { fields: ['url'] } },
+        },
+      },
+    });
+
+    if (!team) throw new Error('notFound');
+
+    const untill = (team as { untill?: string | Date | null }).untill;
+    if (!isTeamActive(untill)) {
+      throw new Error('notFound');
+    }
+
+    const colaborators =
+      (team as { colaborators?: unknown }).colaborators ?? [];
+
+    return mapDirectoryColaborators(
+      (Array.isArray(colaborators) ? colaborators : []) as Array<{
+        documentId?: string;
+        name?: string;
+        username?: string;
+        roleType?: string;
+        blocked?: boolean | number;
+        facePhoto?: { url?: string } | null;
+      }>,
+    );
   },
 
   async getStaffUserByDocumentId(

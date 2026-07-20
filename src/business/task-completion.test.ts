@@ -2,8 +2,37 @@ import { describe, expect, it } from 'vitest';
 
 import {
   areAllSubTasksFinished,
+  isCompletedTaskStatus,
   resolveTaskStatusFromSubTasks,
+  shouldKeepCompletedTaskStatus,
 } from './task-completion';
+
+describe('isCompletedTaskStatus', () => {
+  it('is true for finished, reviewed and delivered', () => {
+    expect(isCompletedTaskStatus('finished')).toBe(true);
+    expect(isCompletedTaskStatus('reviewed')).toBe(true);
+    expect(isCompletedTaskStatus('delivered')).toBe(true);
+  });
+
+  it('is false for in-progress statuses', () => {
+    expect(isCompletedTaskStatus('waiting')).toBe(false);
+    expect(isCompletedTaskStatus('producing')).toBe(false);
+    expect(isCompletedTaskStatus('paused')).toBe(false);
+  });
+});
+
+describe('shouldKeepCompletedTaskStatus', () => {
+  it('keeps reviewed and delivered when sub-tasks still resolve to finished', () => {
+    expect(shouldKeepCompletedTaskStatus('reviewed', 'finished')).toBe(true);
+    expect(shouldKeepCompletedTaskStatus('delivered', 'finished')).toBe(true);
+    expect(shouldKeepCompletedTaskStatus('finished', 'finished')).toBe(true);
+  });
+
+  it('does not keep when work is still in progress', () => {
+    expect(shouldKeepCompletedTaskStatus('reviewed', 'producing')).toBe(false);
+    expect(shouldKeepCompletedTaskStatus('finished', 'paused')).toBe(false);
+  });
+});
 
 describe('areAllSubTasksFinished', () => {
   it('returns false when there are no sub-tasks', () => {

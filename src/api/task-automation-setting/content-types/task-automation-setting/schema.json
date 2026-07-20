@@ -31,6 +31,16 @@
       "relation": "manyToOne",
       "target": "api::step.step"
     },
+    "reviewedStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
+    "deliveredStep": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::step.step"
+    },
     "assignWarnMax": {
       "type": "integer",
       "required": true,

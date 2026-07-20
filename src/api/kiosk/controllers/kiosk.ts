@@ -15,6 +15,7 @@ import {
 } from '../../../business/kiosk-subtasks';
 import { parseKioskColaboratorPasswordBody } from '../../../business/kiosk-staff-colaborators';
 import { parseKioskColaboratorAvatarBody } from '../../../business/kiosk-avatar';
+import { parseKioskColaboratorFacePhotoBody } from '../../../business/kiosk-face-photo';
 import { LOCAL_AUTH_PROVIDER } from '../../../business/user-auth';
 
 async function verifyKioskJwtFromCtx(
@@ -186,6 +187,75 @@ export default {
       ) {
         return ctx.badRequest(message);
       }
+      return ctx.badRequest(message);
+    }
+  },
+
+  async setColaboratorFacePhoto(ctx) {
+    const { documentId, colaboratorDocumentId } = ctx.params;
+    if (!documentId || !colaboratorDocumentId) {
+      return ctx.badRequest('documentId and colaboratorDocumentId required');
+    }
+
+    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    const parsed = parseKioskColaboratorFacePhotoBody(ctx.request.body);
+    if (parsed.ok === false) {
+      return ctx.badRequest('Invalid face photo payload');
+    }
+
+    try {
+      const buffer = Buffer.from(parsed.fileBase64, 'base64');
+      const result = await strapi
+        .service('api::kiosk.kiosk')
+        .setColaboratorFacePhoto(
+          documentId,
+          colaboratorDocumentId,
+          buffer,
+          parsed.mimeType,
+          parsed.fileName,
+        );
+      ctx.body = { ok: true, facePhotoUrl: result.facePhotoUrl };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'error';
+      if (message === 'forbidden') return ctx.forbidden();
+      if (message === 'notFound') return ctx.notFound();
+      if (
+        message === 'invalidType' ||
+        message === 'tooLarge' ||
+        message === 'empty' ||
+        message.startsWith('uploadFailed')
+      ) {
+        return ctx.badRequest(message);
+      }
+      return ctx.badRequest(message);
+    }
+  },
+
+  async listDirectoryTeams(ctx) {
+    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    const data = await strapi.service('api::kiosk.kiosk').listDirectoryTeams();
+    ctx.body = { data };
+  },
+
+  async listDirectoryTeamColaborators(ctx) {
+    const { teamDocumentId } = ctx.params;
+    if (!teamDocumentId) return ctx.badRequest('teamDocumentId required');
+
+    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    try {
+      const data = await strapi
+        .service('api::kiosk.kiosk')
+        .listDirectoryTeamColaborators(teamDocumentId);
+      ctx.body = { data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'error';
+      if (message === 'notFound') return ctx.notFound();
       return ctx.badRequest(message);
     }
   },

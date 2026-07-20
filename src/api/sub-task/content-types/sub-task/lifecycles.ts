@@ -2,6 +2,7 @@ import { assertReasonWhenDeactivating } from '../../../../business/deactivation-
 import { runTaskSubTaskSyncRoutine } from '../../../../business/subtask-activation-sync';
 import {
   resolveTaskStatusFromSubTasks,
+  shouldKeepCompletedTaskStatus,
   type TaskStatus,
 } from '../../../../business/task-completion';
 import { shouldSetTaskStartedAt } from '../../../../business/task-started-at';
@@ -51,6 +52,10 @@ async function syncParentTaskCompletionForTask(
 
   const nextStatus = resolveTaskStatusFromSubTasks(inputs);
   const currentStatus = String(task.status ?? '');
+
+  if (shouldKeepCompletedTaskStatus(currentStatus, nextStatus)) {
+    return;
+  }
 
   if (nextStatus === currentStatus && !shouldSetTaskStartedAt(nextStatus, task.startedAt)) {
     return;
