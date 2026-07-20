@@ -55,7 +55,8 @@ For a local emergency deploy from your machine:
 ```bash
 npm ci && npm run build
 tar --exclude=node_modules --exclude=.git --exclude=public/uploads \
-  --exclude=db/mysql-data --exclude=.env --exclude=db/.env -czf deploy.tgz .
+  --exclude=db/mysql-data --exclude=.env --exclude=db/.env -czf /tmp/deploy.tgz .
+mv /tmp/deploy.tgz .
 scp deploy.tgz root@179.0.179.210:/var/www/pixtrela/strapi/
 ssh pixtrela-vps 'cd /var/www/pixtrela/strapi && tar xzf deploy.tgz && rm deploy.tgz && docker compose -f docker-compose.prod.yml up -d --build'
 ```

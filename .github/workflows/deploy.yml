@@ -28,7 +28,8 @@ jobs:
         run: |
           tar --exclude=node_modules --exclude=.git --exclude=public/uploads \
             --exclude=db/mysql-data --exclude=.env --exclude=db/.env \
-            -czf deploy.tgz .
+            -czf /tmp/deploy.tgz .
+          mv /tmp/deploy.tgz .
 
       - name: Upload build to server
         uses: appleboy/scp-action@v0.1.7
