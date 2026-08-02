@@ -275,6 +275,25 @@ export default {
     ctx.body = user;
   },
 
+  async getColaboratorProfile(ctx) {
+    const { documentId } = ctx.params;
+    if (!documentId) return ctx.badRequest('documentId required');
+
+    const jwtUserId = await verifyKioskOrAdminJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    try {
+      const data = await strapi
+        .service('api::kiosk.kiosk')
+        .getColaboratorProfile(documentId);
+      ctx.body = { data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'error';
+      if (message === 'notFound') return ctx.notFound();
+      return ctx.badRequest(message);
+    }
+  },
+
   async listSubTasks(ctx) {
     const { documentId } = ctx.params;
     if (!documentId) return ctx.badRequest('documentId required');

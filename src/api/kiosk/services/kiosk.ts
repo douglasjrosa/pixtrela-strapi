@@ -7,6 +7,10 @@ import {
   validateKioskAvatarFile,
 } from '../../../business/kiosk-avatar';
 import {
+  mapKioskColaboratorProfile,
+  type KioskColaboratorProfile,
+} from '../../../business/kiosk-colaborator-profile';
+import {
   mapActiveDirectoryTeams,
   mapDirectoryColaborators,
   type KioskDirectoryColaboratorRow,
@@ -281,6 +285,28 @@ async function assertSubTaskAssigned(
 }
 
 export default {
+  async getColaboratorProfile(
+    documentId: string,
+  ): Promise<KioskColaboratorProfile> {
+    const user = await strapi.documents(USER_UID).findOne({
+      documentId,
+      fields: ['name', 'username'],
+      populate: { avatar: { fields: ['url'] } },
+    });
+    if (!user) throw new Error('notFound');
+
+    const profile = mapKioskColaboratorProfile(
+      user as {
+        documentId?: string;
+        name?: string;
+        username?: string;
+        avatar?: { url?: string } | null;
+      },
+    );
+    if (!profile) throw new Error('notFound');
+    return profile;
+  },
+
   async listAssignedSubTasks(
     colaboratorDocumentId: string,
   ): Promise<KioskSubTaskRow[]> {

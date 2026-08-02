@@ -74,6 +74,15 @@ export default {
     },
     {
       method: 'GET',
+      path: '/kiosk/colaborators/:documentId',
+      handler: 'kiosk.getColaboratorProfile',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
       path: '/kiosk/colaborators/:documentId/sub-tasks',
       handler: 'kiosk.listSubTasks',
       config: {
