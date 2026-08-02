@@ -1552,6 +1552,7 @@ export interface PluginUsersPermissionsUser
         minLength: 6;
       }>;
     facePhoto: Schema.Attribute.Media<'images'>;
+    greetingGender: Schema.Attribute.Enumeration<['masculine', 'feminine']>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',

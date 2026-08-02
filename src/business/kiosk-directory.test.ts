@@ -21,7 +21,7 @@ describe('mapActiveDirectoryTeams', () => {
 });
 
 describe('mapDirectoryColaborators', () => {
-  it('keeps active colaborators with facePhotoUrl and sorts by name', () => {
+  it('keeps active colaborators with media urls and sorts by name', () => {
     expect(
       mapDirectoryColaborators([
         {
@@ -29,14 +29,18 @@ describe('mapDirectoryColaborators', () => {
           name: 'Bruno',
           roleType: 'colaborator',
           blocked: false,
+          greetingGender: 'masculine',
           facePhoto: { url: '/uploads/b.jpg' },
+          avatar: { url: '/uploads/ba.jpg' },
         },
         {
           documentId: 'c1',
           name: 'Ana',
           roleType: 'colaborator',
           blocked: false,
+          greetingGender: 'feminine',
           facePhoto: null,
+          avatar: null,
         },
         {
           documentId: 'c3',
@@ -52,8 +56,20 @@ describe('mapDirectoryColaborators', () => {
         },
       ]),
     ).toEqual([
-      { documentId: 'c1', name: 'Ana', facePhotoUrl: null },
-      { documentId: 'c2', name: 'Bruno', facePhotoUrl: '/uploads/b.jpg' },
+      {
+        documentId: 'c1',
+        name: 'Ana',
+        facePhotoUrl: null,
+        avatarUrl: null,
+        greetingGender: 'feminine',
+      },
+      {
+        documentId: 'c2',
+        name: 'Bruno',
+        facePhotoUrl: '/uploads/b.jpg',
+        avatarUrl: '/uploads/ba.jpg',
+        greetingGender: 'masculine',
+      },
     ]);
   });
 });

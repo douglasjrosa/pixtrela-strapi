@@ -89,6 +89,10 @@
       "type": "media",
       "multiple": false,
       "allowedTypes": ["images"]
+    },
+    "greetingGender": {
+      "type": "enumeration",
+      "enum": ["masculine", "feminine"]
     }
   }
 }

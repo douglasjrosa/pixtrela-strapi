@@ -743,8 +743,11 @@ export default {
       fields: ['name', 'untill'],
       populate: {
         colaborators: {
-          fields: ['name', 'username', 'roleType', 'blocked'],
-          populate: { facePhoto: { fields: ['url'] } },
+          fields: ['name', 'username', 'roleType', 'blocked', 'greetingGender'],
+          populate: {
+            facePhoto: { fields: ['url'] },
+            avatar: { fields: ['url'] },
+          },
         },
       },
     });
@@ -766,7 +769,9 @@ export default {
         username?: string;
         roleType?: string;
         blocked?: boolean | number;
+        greetingGender?: string | null;
         facePhoto?: { url?: string } | null;
+        avatar?: { url?: string } | null;
       }>,
     );
   },

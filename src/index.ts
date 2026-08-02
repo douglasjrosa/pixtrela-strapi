@@ -177,7 +177,7 @@ async function ensureRoleReadPermissions(strapi: Core.Strapi, roleType: string, 
 }
 
 async function ensureUploadPermissions(strapi: Core.Strapi, roleType: string, roleId: number) {
-  if (roleType !== 'admin') return;
+  if (!['admin', 'manager', 'leader'].includes(roleType)) return;
   for (const action of UPLOAD_CONTENT_API_ACTIONS) {
     await ensurePermission(strapi, roleId, action);
   }

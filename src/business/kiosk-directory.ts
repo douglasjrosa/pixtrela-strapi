@@ -9,6 +9,8 @@ export type KioskDirectoryColaboratorRow = {
   documentId: string;
   name: string;
   facePhotoUrl: string | null;
+  avatarUrl: string | null;
+  greetingGender: 'masculine' | 'feminine' | null;
 };
 
 export function mapActiveDirectoryTeams(
@@ -38,7 +40,10 @@ export function mapDirectoryColaborators(
     roleType?: string;
     role_type?: string;
     blocked?: boolean | number;
+    greetingGender?: string | null;
+    greeting_gender?: string | null;
     facePhoto?: { url?: string } | null;
+    avatar?: { url?: string } | null;
   }>,
 ): KioskDirectoryColaboratorRow[] {
   return members
@@ -48,11 +53,23 @@ export function mapDirectoryColaborators(
       if (member.blocked === true || member.blocked === 1) return false;
       return true;
     })
-    .map((member) => ({
-      documentId: String(member.documentId ?? member.document_id ?? ''),
-      name: String(member.name ?? member.username ?? ''),
-      facePhotoUrl: member.facePhoto?.url ? String(member.facePhoto.url) : null,
-    }))
+    .map((member) => {
+      const rawGender = String(
+        member.greetingGender ?? member.greeting_gender ?? '',
+      );
+      let greetingGender: KioskDirectoryColaboratorRow['greetingGender'] = null;
+      if (rawGender === 'feminine') greetingGender = 'feminine';
+      if (rawGender === 'masculine') greetingGender = 'masculine';
+      return {
+        documentId: String(member.documentId ?? member.document_id ?? ''),
+        name: String(member.name ?? member.username ?? ''),
+        facePhotoUrl: member.facePhoto?.url
+          ? String(member.facePhoto.url)
+          : null,
+        avatarUrl: member.avatar?.url ? String(member.avatar.url) : null,
+        greetingGender,
+      };
+    })
     .filter((member) => member.documentId.length > 0 && member.name.length > 0)
     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }

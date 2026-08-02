@@ -11,8 +11,8 @@
     "develop": "strapi develop",
     "start": "strapi start",
     "strapi": "strapi",
-    "seed": "npx tsx scripts/seed.ts",
-    "seed:e2e": "npx tsx scripts/seed-e2e-user.ts",
+    "seed": "tsx scripts/seed.ts",
+    "seed:e2e": "tsx scripts/seed-e2e-user.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "upgrade": "npx @strapi/upgrade latest",
@@ -33,6 +33,7 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "tsx": "^4.23.1",
     "typescript": "^5",
     "vitest": "^3.2.4"
   },
