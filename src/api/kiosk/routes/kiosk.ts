@@ -10,6 +10,15 @@ export default {
       },
     },
     {
+      method: 'POST',
+      path: '/kiosk/face-identify',
+      handler: 'kiosk.identifyByFace',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
       method: 'GET',
       path: '/kiosk/staff/users/:documentId',
       handler: 'kiosk.getStaffUser',

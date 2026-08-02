@@ -20,6 +20,15 @@ import {
   validateKioskFacePhotoFile,
 } from '../../../business/kiosk-face-photo';
 import {
+  buildFaceIdentifyResponse,
+  mapFaceIdentifyCandidate,
+  type FaceIdentifyResponse,
+} from '../../../business/kiosk-face-identify';
+import {
+  normalizeFaceVector,
+  rankFaceMatches,
+} from '../../../business/face-vector';
+import {
   canStaffSetColaboratorPassword,
   filterColaboratorsForStaffRole,
   type KioskColaboratorRow,
@@ -687,6 +696,7 @@ export default {
     fileBuffer: Buffer,
     mimeType: string,
     fileName: string,
+    faceVector: number[] | null = null,
   ): Promise<{ facePhotoUrl: string | null }> {
     await assertStaffCanManageColaborator(staffDocumentId, colaboratorDocumentId);
 
@@ -735,7 +745,10 @@ export default {
 
     await strapi.documents(USER_UID).update({
       documentId: colaboratorDocumentId,
-      data: { facePhoto: fileId },
+      data: {
+        facePhoto: fileId,
+        faceVector,
+      },
     });
 
     const fileUrl = (file as { url?: string } | null)?.url;
@@ -743,6 +756,63 @@ export default {
       ? String(fileUrl)
       : await readColaboratorFacePhotoUrl(colaboratorDocumentId);
     return { facePhotoUrl };
+  },
+
+  async identifyByFace(descriptor: number[]): Promise<FaceIdentifyResponse> {
+    const users = await strapi.documents(USER_UID).findMany({
+      filters: {
+        roleType: 'colaborator',
+        blocked: { $ne: true },
+      },
+      fields: ['name', 'greetingGender', 'faceVector', 'blocked', 'roleType'],
+      populate: {
+        avatar: { fields: ['url'] },
+        facePhoto: { fields: ['url'] },
+      },
+      pagination: { pageSize: 500 },
+    });
+
+    const gallery: Array<{ documentId: string; faceVector: number[] }> = [];
+    const byDocumentId = new Map<
+      string,
+      ReturnType<typeof mapFaceIdentifyCandidate>
+    >();
+
+    for (const user of users ?? []) {
+      const documentId = String(
+        (user as { documentId?: string }).documentId ?? '',
+      );
+      const vector = normalizeFaceVector(
+        (user as { faceVector?: unknown }).faceVector,
+      );
+      if (!documentId || !vector) continue;
+
+      gallery.push({ documentId, faceVector: vector });
+      byDocumentId.set(
+        documentId,
+        mapFaceIdentifyCandidate(
+          user as Parameters<typeof mapFaceIdentifyCandidate>[0],
+          { includeFaceVector: true },
+        ),
+      );
+    }
+
+    const ranked = rankFaceMatches(descriptor, gallery);
+
+    if (ranked.status === 'match') {
+      const topId = ranked.ranked[0]?.documentId;
+      const match = topId ? byDocumentId.get(topId) : undefined;
+      if (!match) return { status: 'none' };
+      const { faceVector: _omit, ...safeMatch } = match;
+      void _omit;
+      return { status: 'match', match: safeMatch };
+    }
+
+    return buildFaceIdentifyResponse(
+      ranked.status,
+      ranked.ranked.map((row) => row.documentId),
+      byDocumentId,
+    );
   },
 
   async listDirectoryTeams(): Promise<KioskDirectoryTeamRow[]> {

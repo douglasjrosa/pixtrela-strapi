@@ -16,6 +16,7 @@ import {
 import { parseKioskColaboratorPasswordBody } from '../../../business/kiosk-staff-colaborators';
 import { parseKioskColaboratorAvatarBody } from '../../../business/kiosk-avatar';
 import { parseKioskColaboratorFacePhotoBody } from '../../../business/kiosk-face-photo';
+import { parseKioskFaceIdentifyBody } from '../../../business/kiosk-face-identify';
 import { LOCAL_AUTH_PROVIDER } from '../../../business/user-auth';
 
 async function verifyKioskJwtFromCtx(
@@ -103,6 +104,21 @@ export default {
     }
 
     ctx.body = { documentId, role };
+  },
+
+  async identifyByFace(ctx) {
+    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    const parsed = parseKioskFaceIdentifyBody(ctx.request.body);
+    if (parsed.ok === false) {
+      return ctx.badRequest(parsed.error);
+    }
+
+    const result = await strapi
+      .service('api::kiosk.kiosk')
+      .identifyByFace(parsed.descriptor);
+    ctx.body = result;
   },
 
   async listStaffColaborators(ctx) {
@@ -202,6 +218,9 @@ export default {
 
     const parsed = parseKioskColaboratorFacePhotoBody(ctx.request.body);
     if (parsed.ok === false) {
+      if (parsed.error === 'invalidFaceVector') {
+        return ctx.badRequest('Invalid faceVector');
+      }
       return ctx.badRequest('Invalid face photo payload');
     }
 
@@ -215,6 +234,7 @@ export default {
           buffer,
           parsed.mimeType,
           parsed.fileName,
+          parsed.faceVector,
         );
       ctx.body = { ok: true, facePhotoUrl: result.facePhotoUrl };
     } catch (error) {

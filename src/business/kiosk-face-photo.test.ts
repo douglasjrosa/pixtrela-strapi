@@ -41,7 +41,7 @@ describe('validateKioskFacePhotoFile', () => {
 });
 
 describe('parseKioskColaboratorFacePhotoBody', () => {
-  it('accepts base64 payload', () => {
+  it('accepts base64 payload and clears faceVector when omitted', () => {
     expect(
       parseKioskColaboratorFacePhotoBody({
         fileBase64: 'abc',
@@ -53,6 +53,7 @@ describe('parseKioskColaboratorFacePhotoBody', () => {
       fileBase64: 'abc',
       mimeType: 'image/jpeg',
       fileName: 'face.jpg',
+      faceVector: null,
     });
   });
 
@@ -67,7 +68,30 @@ describe('parseKioskColaboratorFacePhotoBody', () => {
       fileBase64: 'abc',
       mimeType: 'image/png',
       fileName: 'face-photo.jpg',
+      faceVector: null,
     });
+  });
+
+  it('accepts a valid faceVector', () => {
+    const faceVector = Array.from({ length: 128 }, (_, i) => i / 128);
+    const parsed = parseKioskColaboratorFacePhotoBody({
+      fileBase64: 'abc',
+      mimeType: 'image/jpeg',
+      faceVector,
+    });
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.faceVector).toEqual(faceVector);
+    }
+  });
+
+  it('rejects invalid faceVector length', () => {
+    const parsed = parseKioskColaboratorFacePhotoBody({
+      fileBase64: 'abc',
+      mimeType: 'image/jpeg',
+      faceVector: [1, 2, 3],
+    });
+    expect(parsed).toEqual({ ok: false, error: 'invalidFaceVector' });
   });
 
   it('rejects invalid payloads', () => {

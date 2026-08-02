@@ -93,6 +93,9 @@
     "greetingGender": {
       "type": "enumeration",
       "enum": ["masculine", "feminine"]
+    },
+    "faceVector": {
+      "type": "json"
     }
   }
 }
