@@ -19,6 +19,15 @@ export default {
       },
     },
     {
+      method: 'POST',
+      path: '/kiosk/tag-identify',
+      handler: 'kiosk.identifyByTag',
+      config: {
+        auth: false,
+        policies: [],
+      },
+    },
+    {
       method: 'GET',
       path: '/kiosk/staff/users/:documentId',
       handler: 'kiosk.getStaffUser',

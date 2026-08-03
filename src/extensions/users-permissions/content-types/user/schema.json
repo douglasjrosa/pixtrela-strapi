@@ -96,6 +96,10 @@
     },
     "faceVector": {
       "type": "json"
+    },
+    "userTag": {
+      "type": "string",
+      "unique": true
     }
   }
 }

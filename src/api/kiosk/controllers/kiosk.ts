@@ -17,6 +17,7 @@ import { parseKioskColaboratorPasswordBody } from '../../../business/kiosk-staff
 import { parseKioskColaboratorAvatarBody } from '../../../business/kiosk-avatar';
 import { parseKioskColaboratorFacePhotoBody } from '../../../business/kiosk-face-photo';
 import { parseKioskFaceIdentifyBody } from '../../../business/kiosk-face-identify';
+import { parseKioskTagIdentifyBody } from '../../../business/kiosk-tag-identify';
 import { LOCAL_AUTH_PROVIDER } from '../../../business/user-auth';
 
 async function verifyKioskJwtFromCtx(
@@ -119,6 +120,47 @@ export default {
       .service('api::kiosk.kiosk')
       .identifyByFace(parsed.descriptor);
     ctx.body = result;
+  },
+
+  async identifyByTag(ctx) {
+    const jwtUserId = await verifyKioskJwtFromCtx(ctx);
+    if (!jwtUserId) return ctx.unauthorized();
+
+    const parsed = parseKioskTagIdentifyBody(ctx.request.body);
+    if (parsed.ok === false) {
+      return ctx.badRequest(parsed.error);
+    }
+
+    const knex = strapi.db.connection;
+    const rows = await knex(USERS_TABLE)
+      .where({ user_tag: parsed.value.userTag })
+      .select(
+        'id',
+        'document_id',
+        'role_type',
+        'password',
+        'blocked',
+        'provider',
+        'username',
+      )
+      .limit(1);
+    const user = mapUserRowFromDb(rows[0] as Record<string, unknown>);
+
+    if (!canIdentifyAtKiosk(user)) {
+      return ctx.forbidden('Invalid credentials');
+    }
+
+    if (user.provider && user.provider !== LOCAL_AUTH_PROVIDER) {
+      return ctx.forbidden('Invalid credentials');
+    }
+
+    const documentId = readUserDocumentId(user);
+    const role = readKioskIdentifiableRole(user);
+    if (!documentId || !role) {
+      return ctx.forbidden('Invalid credentials');
+    }
+
+    ctx.body = { documentId, role };
   },
 
   async listStaffColaborators(ctx) {
