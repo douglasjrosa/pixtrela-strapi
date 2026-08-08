@@ -104,7 +104,10 @@ export default {
       return ctx.forbidden('Invalid credentials');
     }
 
-    ctx.body = { documentId, role };
+    const welcome = await strapi
+      .service('api::kiosk.kiosk')
+      .loadWelcomeProfile(documentId);
+    ctx.body = { documentId, role, welcome };
   },
 
   async identifyByFace(ctx) {
@@ -160,7 +163,10 @@ export default {
       return ctx.forbidden('Invalid credentials');
     }
 
-    ctx.body = { documentId, role };
+    const welcome = await strapi
+      .service('api::kiosk.kiosk')
+      .loadWelcomeProfile(documentId);
+    ctx.body = { documentId, role, welcome };
   },
 
   async listStaffColaborators(ctx) {

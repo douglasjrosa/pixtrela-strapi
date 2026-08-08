@@ -30,12 +30,31 @@ import {
   USERS_TABLE,
 } from '../../../business/kiosk-subtasks';
 import { LOCAL_AUTH_PROVIDER } from '../../../business/user-auth';
+import { mapWelcomeProfile } from '../../../business/welcome-profile';
 
 const USER_UID = 'plugin::users-permissions.user';
 
+async function loadWelcomeForDocumentId(documentId: string) {
+  const user = await strapi.documents(USER_UID).findOne({
+    documentId,
+    fields: ['name', 'username', 'greetingGender'],
+    populate: {
+      avatar: { fields: ['url'] },
+      facePhoto: { fields: ['url'] },
+    },
+  });
+  if (!user) return null;
+  return mapWelcomeProfile(user as Parameters<typeof mapWelcomeProfile>[0]);
+}
+
 async function issueLoginForUserId(
   userId: number,
-): Promise<AuthLoginSuccessBody | null> {
+): Promise<
+  | (AuthLoginSuccessBody & {
+      welcome: ReturnType<typeof mapWelcomeProfile> | null;
+    })
+  | null
+> {
   const user = await strapi.db.query(USER_UID).findOne({
     where: { id: userId },
     select: [
@@ -63,11 +82,17 @@ async function issueLoginForUserId(
     .service('jwt')
     .issue({ id: user.id });
 
+  const documentId = String(user.documentId ?? '');
+  const welcome = documentId
+    ? await loadWelcomeForDocumentId(documentId)
+    : null;
+
   return {
     jwt,
     user: buildAuthLoginUserPayload(
       user as Parameters<typeof buildAuthLoginUserPayload>[0],
     ),
+    welcome,
   };
 }
 

@@ -34,6 +34,10 @@ import {
   type KioskColaboratorRow,
   type KioskStaffActorRole,
 } from '../../../business/kiosk-staff-colaborators';
+import {
+  mapWelcomeProfile,
+  type WelcomeProfile,
+} from '../../../business/welcome-profile';
 import { ACTIVE_TEAM_FILTER, isTeamActive } from '../../../business/team-active';
 import {
   assertKioskJwt,
@@ -191,6 +195,23 @@ async function readColaboratorFacePhotoUrl(
   return facePhoto?.url ? String(facePhoto.url) : null;
 }
 
+async function loadWelcomeProfile(
+  documentId: string,
+): Promise<WelcomeProfile | null> {
+  const user = await strapi.documents(USER_UID).findOne({
+    documentId,
+    fields: ['name', 'username', 'greetingGender'],
+    populate: {
+      avatar: { fields: ['url'] },
+      facePhoto: { fields: ['url'] },
+    },
+  });
+  if (!user) return null;
+  return mapWelcomeProfile(
+    user as Parameters<typeof mapWelcomeProfile>[0],
+  );
+}
+
 async function mapColaboratorsWithMedia(
   colaborators: KioskColaboratorRow[],
 ): Promise<KioskColaboratorRow[]> {
@@ -294,6 +315,10 @@ async function assertSubTaskAssigned(
 }
 
 export default {
+  async loadWelcomeProfile(documentId: string): Promise<WelcomeProfile | null> {
+    return loadWelcomeProfile(documentId);
+  },
+
   async getColaboratorProfile(
     documentId: string,
   ): Promise<KioskColaboratorProfile> {

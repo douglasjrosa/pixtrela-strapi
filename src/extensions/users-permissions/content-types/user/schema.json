@@ -71,6 +71,12 @@
       "type": "string",
       "required": true
     },
+    "lastName": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
     "code": {
       "type": "integer",
       "default": 0

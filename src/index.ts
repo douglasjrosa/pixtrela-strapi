@@ -393,6 +393,16 @@ async function ensureDashboardPermissions(strapi: Core.Strapi, roleType: string,
   }
 }
 
+async function ensureProfilePermissions(
+  strapi: Core.Strapi,
+  roleType: string,
+  roleId: number,
+) {
+  if (!['colaborator', 'leader', 'manager'].includes(roleType)) return;
+  await ensurePermission(strapi, roleId, 'api::profile.profile.updateAvatar');
+  await ensurePermission(strapi, roleId, 'api::profile.profile.updatePersonal');
+}
+
 async function backfillUserRoleTypes(strapi: Core.Strapi) {
   const users = await strapi.db.query('plugin::users-permissions.user').findMany({
     populate: ['role'],
@@ -428,6 +438,7 @@ export default {
       await ensureUploadPermissions(strapi, roleDef.type, role.id);
       await ensureRoleReadPermissions(strapi, roleDef.type, role.id);
       await ensureDashboardPermissions(strapi, roleDef.type, role.id);
+      await ensureProfilePermissions(strapi, roleDef.type, role.id);
     }
     await ensureSuperAdminCanReadUpRoles(strapi);
     await ensureExistingUsersHaveLocalProvider(strapi);
